@@ -78,7 +78,18 @@ readInteger:
 	move $v1, $a0 # Modify v1 return value in-place
 	la $t0, readIntegerBuffer # Pointer to current read location
 	addiu $t1, $t0, 10 # Pointer to one past end of buffer (end of read)
-	j _readIntegerReadLoop # Jump into loop
+	j _readIntegerDiscardLoop # Jump into loop
+
+_readIntegerDiscardLoop:
+	lb $t2, ($v1) # Load next character from string
+
+	# Check if not "0"
+	li $t3, 48
+	bne $t2, $t3, _readIntegerReadLoop
+
+	# Increment and loop back
+	addiu $v1, 1
+	j _readIntegerDiscardLoop
 
 _readIntegerReadLoop:
 	lb $t2, ($v1) # Load next character from string
