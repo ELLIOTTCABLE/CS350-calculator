@@ -1,7 +1,7 @@
 # Lucas Myers And Elliot Cable
 # Final Project.asm
-	
-	.data # Data portion
+
+.data # Data portion
 
 startMessage:
 	.asciiz "Welcome to the calculator."
@@ -30,7 +30,7 @@ lineBuffer: # Used for storing lines read in from user input
 readIntegerBuffer: # Used for parsing integers
 	.space 10
 
-	.text
+.text
 
 ## Convenient Syscall Wrappers ##
 printInteger:
@@ -75,13 +75,13 @@ getString:
 # $v0 -> Parsed integer, -1 if overflow
 # $v1 -> Pointer to string after parsed integer, 0 if overflow
 readInteger:
-	move $v1, $a0 # Modify v1 return value in-place
-	la $t0, readIntegerBuffer # Pointer to current read location
-	addiu $t1, $t0, 10 # Pointer to one past end of buffer (end of read)
-	j _readIntegerDiscardLoop # Jump into loop
+	move $v1, $a0                           # Modify v1 return value in-place
+	la $t0, readIntegerBuffer               # Pointer to current read location
+	addiu $t1, $t0, 10                      # Pointer to one past end of buffer (end of read)
+	j _readIntegerDiscardLoop               # Jump into loop
 
 _readIntegerDiscardLoop:
-	lb $t2, ($v1) # Load next character from string
+	lb $t2, ($v1)                           # Load next character from string
 
 	# Check if not "0"
 	li $t3, 48
@@ -92,9 +92,9 @@ _readIntegerDiscardLoop:
 	j _readIntegerDiscardLoop
 
 _readIntegerReadLoop:
-	lb $t2, ($v1) # Load next character from string
-	addi $t2, -48 # Offset ASCII value to get numerical value
-	
+	lb $t2, ($v1)                           # Load next character from string
+	addi $t2, -48                           # Offset ASCII value to get numerical value
+
 	# Check if it's within the range of ASCII digits
 	# If not, branch to the summation step
 	li $t3, -1
@@ -104,16 +104,16 @@ _readIntegerReadLoop:
 	and $t3, $t3, $t4
 	beqz $t3, _readIntegerSum
 
-	beq $t0, $t1, _readIntegerOverflow # Jump to overflow if we're past 10 digits
+	beq $t0, $t1, _readIntegerOverflow      # Jump to overflow if we're past 10 digits
 
-	sb $t2, ($t0) # Store numerical value in buffer
-	addiu $t0, 1 # Increment buffer pointer
-	addiu $v1, 1 # Increment string pointer
+	sb $t2, ($t0)                           # Store numerical value in buffer
+	addiu $t0, 1                            # Increment buffer pointer
+	addiu $v1, 1                            # Increment string pointer
 
-	j _readIntegerReadLoop # Loop back
+	j _readIntegerReadLoop                  # Loop back
 
 _readIntegerSum:
-	li $v0, 0 # Initialize accumulation register
+	li $v0, 0                               # Initialize accumulation register
 
 	# Pointer to one before start of buffer (end of read)
 	la $t1, readIntegerBuffer
@@ -126,12 +126,12 @@ _readIntegerSum:
 	li $t2, 1
 	li $t3, 10
 
-	j _readIntegerSumLoop # Jump to summation loop
+	j _readIntegerSumLoop                   # Jump to summation loop
 
 _readIntegerSumLoop:
-	beq $t0, $t1, _readIntegerReturn # Branch to return when done reading
+	beq $t0, $t1, _readIntegerReturn        # Branch to return when done reading
 
-	# Load byte and multiply by current place value	
+	# Load byte and multiply by current place value
 	lb $t4, ($t0)
 	multu $t4, $t2
 	mflo $t5
@@ -139,15 +139,15 @@ _readIntegerSumLoop:
 	slt $t7, $t5, $zero
 	sne $t8, $t6, $zero
 	or $t7, $t7, $t8
-	bnez $t7, _readIntegerOverflow # Overflow check
-	
+	bnez $t7, _readIntegerOverflow         # Overflow check
+
 	# Accumulate into $v0
 	addu $v0, $v0, $t5
-	bltz $v0, _readIntegerOverflow # Overflow check
-	
-	mul $t2, $t2, $t3 # Increase place value
-	addi $t0, -1 # Decrement read pointer
-	j _readIntegerSumLoop # Loop back
+	bltz $v0, _readIntegerOverflow         # Overflow check
+
+	mul $t2, $t2, $t3                      # Increase place value
+	addi $t0, -1                           # Decrement read pointer
+	j _readIntegerSumLoop                  # Loop back
 
 _readIntegerOverflow:
 	li $v0, -1
@@ -166,7 +166,7 @@ compareStrings:
 	# Move arguments into temporaries
 	move $t0, $a0
 	move $t1, $a1
-	j _compareStringsLoop # Jump into loop
+	j _compareStringsLoop                   # Jump into loop
 
 _compareStringsLoop:
 	# Load characters from both strings
@@ -175,13 +175,13 @@ _compareStringsLoop:
 
 	# Return conditions
 	bne $t2, $t3, _compareStringsReturnFalse
-	beqz $t2, _compareStringsReturnTrue # Null-termination
+	beqz $t2, _compareStringsReturnTrue     # Null-termination
 
 	# Increment pointers
 	addiu $t0, 1
 	addiu $t1, 1
 
-	j _compareStringsLoop # Loop back
+	j _compareStringsLoop                  # Loop back
 
 _compareStringsReturnFalse:
 	li $v0, 0
@@ -198,31 +198,31 @@ mainLoop:
 	la $a0, lineBuffer
 	la $a1, 1024
 	jal getString
-	
+
 	# Check if this is a command
 	lb $t0, ($a0)
-	li $t1, 58 # ":" character
+	li $t1, 58                              # ":" character
 	beq $t0, $t1, processCommand
 
 	# Read in an integer
 	jal readInteger
 	li $t0, -1
-	beq $t0, $v0, errorOverflow # Message on overflow
+	beq $t0, $v0, errorOverflow             # Message on overflow
 
 	# Print our parsed integer (for debugging)
 	move $a0, $v0
 	jal printIntegerLine
 
-	j mainLoop # Loop back
+	j mainLoop                              # Loop back
 
 errorOverflow:
 	la $a0, overflowMessage
 	jal printStringLine
-	j mainLoop # Back to main loop
+	j mainLoop                              # Back to main loop
 
 processCommand:
-	addiu $a0, 1 # Move reading pointer past colon
-	
+	addiu $a0, 1                            # Move reading pointer past colon
+
 	# Check for first quit command
 	la $a1, quitCommandShort
 	jal compareStrings
@@ -236,15 +236,17 @@ processCommand:
 	# Complain on unrecognized command
 	la $a0, unrecognizedCommandMessage
 	jal printStringLine
-	j mainLoop # Back to main loop
+	j mainLoop                              # Back to main loop
 
 main:
 	la $a0, startMessage
 	jal printStringLine
-	j mainLoop # Start main loop
+	j mainLoop                              # Start main loop
 
 exit:
 	la $a0, endMessage
 	jal printStringLine
 	li $v0, 10
 	syscall
+
+# vim: set shiftwidth=8 tabstop=8 noexpandtab softtabstop& list listchars=tab\: ·:
