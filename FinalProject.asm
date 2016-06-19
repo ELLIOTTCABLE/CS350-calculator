@@ -151,7 +151,6 @@ _readIntegerSumLoop:
 
 _readIntegerOverflow:
 	li $v0, -1
-	li $v1, 0
 	jr $ra
 
 _readIntegerReturn:
