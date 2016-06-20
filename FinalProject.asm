@@ -13,6 +13,7 @@ endMessage:
 	.asciiz "Goodbye!"
 
 unrecognizedCommandMessage:
+	.asciiz "Unsupported command. Commands: q, quit"
 	.asciiz "Command not recognized."
 
 overflowMessage:
@@ -488,10 +489,10 @@ mainLoop:
 	move $a3, $a0
 	jal printStringDEBUG
 
-#	# Check if this is a command
-#	lb $t0, ($a0)
-#	li $t1, 58                              # ":" character
-#	beq $t0, $t1, processCommand
+	# Check if this is a command
+	lb $t0, ($a0)
+	li $t1, 58                              # ":" character
+	beq $t0, $t1, processCommand
 
 	jal processOperator
 
