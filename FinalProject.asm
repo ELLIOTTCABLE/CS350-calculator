@@ -113,30 +113,39 @@ getString: # @leaf
 # === readInteger == #
 # @leaf
 # @param  $a0   start of string to parse as integer
-# @return $v0   parsed integer, -1 if overflow
-# @return $v1   pointer to string after parsed integer, null if overflow
+# @return $v0   parsed integer, 0 if failed to parse
 #---
 # FIXME: Modify $a0 in-place, like the rest of the procedures.
 
 readInteger:
-	move $v1, $a0                           # Modify v1 return value in-place
 	la $t0, readIntegerBuffer               # Pointer to current read location
 	addiu $t1, $t0, 10                      # Pointer to one past end of buffer (end of read)
+
+	# Next-level hacking for negative numbers (not really)
+	lb $t2, ($a0)
+	li $t3, 1
+	li $t4, -2
+	li $t5, 45 # "-" character
+	seq $t5, $t2, $t5
+	add $a0, $a0, $t5
+	mul $t4, $t5, $t4
+	add $t9, $t3, $t4
+
 	j _readIntegerDiscardLoop               # Jump into loop
 
 _readIntegerDiscardLoop:
-	lb $t2, ($v1)                           # Load next character from string
+	lb $t2, ($a0)                           # Load next character from string
 
 	# Check if not "0"
 	li $t3, 48
 	bne $t2, $t3, _readIntegerReadLoop
 
 	# Increment and loop back
-	addiu $v1, 1
+	addiu $a0, 1
 	j _readIntegerDiscardLoop
 
 _readIntegerReadLoop:
-	lb $t2, ($v1)                           # Load next character from string
+	lb $t2, ($a0)                           # Load next character from string
 	addi $t2, -48                           # Offset ASCII value to get numerical value
 
 	# Check if it's within the range of ASCII digits
@@ -152,7 +161,7 @@ _readIntegerReadLoop:
 
 	sb $t2, ($t0)                           # Store numerical value in buffer
 	addiu $t0, 1                            # Increment buffer pointer
-	addiu $v1, 1                            # Increment string pointer
+	addiu $a0, 1                            # Increment string pointer
 
 	j _readIntegerReadLoop                  # Loop back
 
@@ -194,10 +203,13 @@ _readIntegerSumLoop:
 	j _readIntegerSumLoop                  # Loop back
 
 _readIntegerOverflow:
-	li $v0, -1
-	jr $ra
+	la $a0, overflowMessage
+	jal printString
+	jal printNewline
+	j mainLoop
 
 _readIntegerReturn:
+	mul $v0, $v0, $t9
 	jr $ra
 
 
