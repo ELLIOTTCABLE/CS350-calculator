@@ -45,34 +45,50 @@ readIntegerBuffer: # Used for parsing integers
 .text
 
 # === syscall wrappers == #
-# All of these stomp on $v0, and some on $t0 (and, of course, on $ra.)
+# All of these stomp on $t0, and some on $t1 (and, of course, on $ra.)
 
 printInteger: # @leaf
+	move $t0, $v0
 	li $v0, 1
 	syscall
+
+	move $v0, $t0
 	jr $ra
 
 printString: # @leaf
+	move $t0, $v0
 	li $v0, 4
 	syscall
+
+	move $v0, $t0
 	jr $ra
 
 printNewline: # @leaf
 	move $t0, $a0
+	move $t1, $v0
+
 	li $v0, 4
 	la $a0, newline
 	syscall
+
+	move $v0, $t1
 	move $a0, $t0
 	jr $ra
 
 getInteger: # @leaf
+	move $t0, $v0
 	li $v0, 5
 	syscall
+
+	move $v0, $t0
 	jr $ra
 
 getString: # @leaf
+	move $t0, $v0
 	li $v0, 8
 	syscall
+
+	move $v0, $t0
 	jr $ra
 
 
