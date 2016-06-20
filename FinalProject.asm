@@ -305,6 +305,7 @@ _processOperator__prelude:
 
 _processOperator__body:
 	lb $s0, ($a0)                           # Going to keep the operator char in $s0
+	addi $a0, 1
 
 	# FIXME: This may support the SYMBOL+(REG) syntax?
 	li $t0, 42                              # ASCII bounds-checking:
@@ -340,8 +341,8 @@ _opPlus:
 	jal consumeWhitepsace                   # advance $a0 forward past any whitespace,
 	jal readInteger                         # advance $a0 past one integer, and store in $v0
 
-#	move $a0, $v0
-#	jal printInteger
+ 	move $a0, $v0
+ 	jal printInteger
 
 	li $t0, -1
 	beq $t0, $v0, _processOperator__overflow
