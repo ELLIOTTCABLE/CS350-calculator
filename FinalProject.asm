@@ -15,6 +15,12 @@ unrecognizedCommandMessage:
 overflowMessage:
 	.asciiz "Overflow occured when reading an integer; try smaller numbers."
 
+operatorErrorMessage:
+	.asciiz "Format: <+ | - | * | /> <number> <number>."
+
+#DEBUG:
+#	.asciiz "-- "
+
 newline:
 	.asciiz "\n"
 
@@ -33,6 +39,7 @@ readIntegerBuffer: # Used for parsing integers
 .text
 
 ## Convenient Syscall Wrappers ##
+# All leaf procedures
 printInteger:
 	li $v0, 1
 	syscall
@@ -51,12 +58,28 @@ printString:
 	syscall
 	jr $ra
 
-printStringLine:
+printLine:
+	move $s0, $a0
 	li $v0, 4
-	syscall
 	la $a0, newline
 	syscall
+	move $a0, $s0
 	jr $ra
+
+#printDebugLine:
+#	move $s0, $a0                           # Store argument
+#	li $v0, 4
+#
+#	la $a0, DEBUG
+#	syscall
+#
+#	move $a0, $s0                           # Restore argument
+#	syscall
+#
+#	la $a0, newline
+#	syscall
+#
+#	jr $ra
 
 getInteger:
 	li $v0, 5
@@ -74,6 +97,7 @@ getString:
 # $a0 -> Start of string to parse as integer
 # $v0 -> Parsed integer, -1 if overflow
 # $v1 -> Pointer to string after parsed integer, 0 if overflow
+# leaf procedure
 readInteger:
 	move $v1, $a0                           # Modify v1 return value in-place
 	la $t0, readIntegerBuffer               # Pointer to current read location
@@ -161,6 +185,7 @@ _readIntegerReturn:
 # $a0 -> Start address of first string
 # $a1 -> Start address of second string
 # $v0 -> 1 if strings are equal, 0 if not
+# Leaf procedure
 compareStrings:
 	# Move arguments into temporaries
 	move $t0, $a0
@@ -192,35 +217,139 @@ _compareStringsReturnTrue:
 ## End of String Comparison Routine ##
 
 ## Main Code ##
+# $a0 -> Modified in-place to skip whitespace
+# Leaf procedure
+consumeWhitepsace:
+	lb $t0, ($a0)
+	li $t1, 32
+	li $t2, 9
+	seq $t1, $t0, $t1
+	seq $t2, $t0, $t2
+	or $t0, $t1, $t2
+	beqz $t0, _consumeWhitspaceNonWhitespace
+	addi $a0, 1
+	j consumeWhitepsace
+_consumeWhitspaceNonWhitespace:
+	jr $ra
+
+
+# Non-leaf procedure
 mainLoop:
 	# Read in a line of input from the user
 	la $a0, lineBuffer
 	la $a1, 1024
 	jal getString
 
+	# Discard leading whitespace
+	jal consumeWhitepsace
+
 	# Check if this is a command
 	lb $t0, ($a0)
 	li $t1, 58                              # ":" character
 	beq $t0, $t1, processCommand
 
+	jal processOperator
+
+	# FIXME
 	# Read in an integer
-	jal readInteger
-	li $t0, -1
-	beq $t0, $v0, errorOverflow             # Message on overflow
+	#jal readInteger
+	#li $t0, -1
+	#beq $t0, $v0, errorOverflow             # Message on overflow
 
 	# Print our parsed integer (for debugging)
-	move $a0, $v0
-	jal printIntegerLine
+	#move $a0, $v0
+	#jal printDebugLine
 
 	j mainLoop                              # Loop back
 
+## Operator-Processing Routine ##
+# $a0 -> String with operator at start
+# 	@NON-LEAF!
+ processOperator:
+_processOperator__prelude:
+	# NOTE: I'm confused about the conventions w.r.t the frame-pointer; it seems that, generally
+	#       speaking, $fp should point to the *start* of the stack-frame (i.e. the value of $sp
+	# 		before any manipulation.) However, this required me to save the value of the caller's
+	# 		existing $fp somewhere temporary, so I can replace it, and that was a waste of quite
+	# 		a few instructions; so I opted to store that *guaranteed* word (caller's frame-
+	# 		pointer) *before* our frame-pointer (i.e. at `-4($fp)`). Thus, arguments passed to us
+	# 		on the stack begin with `-8($fp)` instead of the obvious `-4($fp)`. (This, as far as I
+	# 		can tell, matches the x86 calling-convention.)
+	addi $sp, $sp, -12	# Allocate stack space for three 4-byte items:
+	sw $fp, 8($sp) 		# caller's $fp,
+	move $fp, $sp
+	sw $ra, 4($sp)	 	# caller's $ra,
+	sw $s0, 0($sp) 		# caller's $s0.
+
+_processOperator__body:
+	lb $t0, ($a0)
+
+	# FIXME: This may support the SYMBOL+(REG) syntax?
+	li $t1, 42                              # ASCII bounds-checking: 
+	li $t2, 47                              # <-- 42  *    43  +    44  ,    45  -    46  .    47  / -->
+	slt $t3, $t0, $t1
+	sgt $t4, $t0, $t2
+	or $t3, $t3, $t4
+	
+	bnez $t3, _opERROR                      # ... if either greater or less than our range, jump to error
+
+	la $t2, _operatorJumpTable
+	addi $t0, -42 							# index from the ASCII byte into [*, +, _, -, _, /]
+	add $t0, $t0, $t2 						# add that index to the address of our jump-table,
+
+	jr $t0 									# … jump into the computed address in our jump-table
+
+_operatorJumpTable:
+	j _opMultiply	# *
+	j _opPlus		# +
+	j _opERROR		# ,
+	j _opSubtract	# ,
+	j _opERROR
+	j _opDivide
+
+_opMultiply:
+	jal printString
+	jal printLine
+	j _processOperator__postlude
+_opPlus:
+	jal printString
+	jal printLine
+	j _processOperator__postlude
+_opSubtract:
+	jal printString
+	jal printLine
+	j _processOperator__postlude
+_opDivide:
+	jal printString
+	jal printLine
+	j _processOperator__postlude
+
+_opERROR:
+	la $a0, operatorErrorMessage
+	jal 
+
+_processOperator__postlude:
+	move $t0, $fp
+	move $fp, $sp  # our frame's base-pointer
+	addi $sp, $sp, -8
+	sw $t0, 8($sp) # caller's $fp
+	sw $ra, 4($sp)
+	sw $s0, 0($sp)
+
+	lw $s0 0($sp)
+
+## End of Operator-Processing Routine ##
+
 errorOverflow:
 	la $a0, overflowMessage
-	jal printStringLine
+	jal printString
+	jal printLine
 	j mainLoop                              # Back to main loop
 
 processCommand:
 	addiu $a0, 1                            # Move reading pointer past colon
+
+	jal consumeWhitepsace
 
 	# Check for first quit command
 	la $a1, quitCommandShort
@@ -234,17 +363,23 @@ processCommand:
 
 	# Complain on unrecognized command
 	la $a0, unrecognizedCommandMessage
-	jal printStringLine
+	jal printString
+	jal printLine
 	j mainLoop                              # Back to main loop
 
 main:
+	li $a0, 1234
+	jal printDebugLine
+
 	la $a0, startMessage
-	jal printStringLine
+	jal printString
+	jal printLine
 	j mainLoop                              # Start main loop
 
 exit:
 	la $a0, endMessage
-	jal printStringLine
+	jal printString
+	jal printLine
 	li $v0, 10
 	syscall
 
