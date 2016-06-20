@@ -205,7 +205,7 @@ _compareStringsLoop:
 	addiu $t0, 1
 	addiu $t1, 1
 
-	j _compareStringsLoop                  # Loop back
+	j _compareStringsLoop                   # Loop back
 
 _compareStringsReturnFalse:
 	li $v0, 0
@@ -254,7 +254,7 @@ mainLoop:
 	# Read in an integer
 	#jal readInteger
 	#li $t0, -1
-	#beq $t0, $v0, errorOverflow             # Message on overflow
+	#beq $t0, $v0, errorOverflow            # Message on overflow
 
 	# Print our parsed integer (for debugging)
 	#move $a0, $v0
@@ -269,43 +269,43 @@ mainLoop:
 _processOperator__prelude:
 	# NOTE: I'm confused about the conventions w.r.t the frame-pointer; it seems that, generally
 	#       speaking, $fp should point to the *start* of the stack-frame (i.e. the value of $sp
-	# 		before any manipulation.) However, this required me to save the value of the caller's
-	# 		existing $fp somewhere temporary, so I can replace it, and that was a waste of quite
-	# 		a few instructions; so I opted to store that *guaranteed* word (caller's frame-
-	# 		pointer) *before* our frame-pointer (i.e. at `-4($fp)`). Thus, arguments passed to us
-	# 		on the stack begin with `-8($fp)` instead of the obvious `-4($fp)`. (This, as far as I
-	# 		can tell, matches the x86 calling-convention.)
-	addi $sp, $sp, -12	# Allocate stack space for three 4-byte items:
-	sw $fp, 8($sp) 		# caller's $fp,
+	#       before any manipulation.) However, this required me to save the value of the caller's
+	#       existing $fp somewhere temporary, so I can replace it, and that was a waste of quite
+	#       a few instructions; so I opted to store that *guaranteed* word (caller's frame-
+	#       pointer) *before* our frame-pointer (i.e. at `-4($fp)`). Thus, arguments passed to us
+	#       on the stack begin with `-8($fp)` instead of the obvious `-4($fp)`. (This, as far as I
+	#       can tell, matches the x86 calling-convention.)
+	addi $sp, $sp, -12      # Allocate stack space for three 4-byte items:
+	sw $fp, 8($sp)          # caller's $fp,
 	move $fp, $sp
-	sw $ra, 4($sp)	 	# caller's $ra,
-	sw $s0, 0($sp) 		# caller's $s0.
+	sw $ra, 4($sp)          # caller's $ra,
+	sw $s0, 0($sp)          # caller's $s0.
 
 _processOperator__body:
 	lb $t0, ($a0)
 
 	# FIXME: This may support the SYMBOL+(REG) syntax?
-	li $t1, 42                              # ASCII bounds-checking: 
+	li $t1, 42                              # ASCII bounds-checking:
 	li $t2, 47                              # <-- 42  *    43  +    44  ,    45  -    46  .    47  / -->
 	slt $t3, $t0, $t1
 	sgt $t4, $t0, $t2
 	or $t3, $t3, $t4
-	
+
 	bnez $t3, _opERROR                      # ... if either greater or less than our range, jump to error
 
 	la $t2, _operatorJumpTable
-	addi $t0, -42 							# index from the ASCII byte into [*, +, _, -, _, /]
-	add $t0, $t0, $t2 						# add that index to the address of our jump-table,
+	addi $t0, -42                           # index from the ASCII byte into [*, +, _, -, _, /]
+	add $t0, $t0, $t2                       # add that index to the address of our jump-table,
 
-	jr $t0 									# … jump into the computed address in our jump-table
+	jr $t0                                  # … jump into the computed address in our jump-table
 
 _operatorJumpTable:
-	j _opMultiply	# *
-	j _opPlus		# +
-	j _opERROR		# ,
-	j _opSubtract	# ,
-	j _opERROR
-	j _opDivide
+	j _opMultiply   # *
+	j _opPlus       # +
+	j _opERROR      # ,
+	j _opSubtract   # -
+	j _opERROR      # .
+	j _opDivide     # /
 
 _opMultiply:
 	jal printString
@@ -339,8 +339,8 @@ _processOperator__postlude:
 	sw $s0, 0($sp)
 
 	lw $s0 0($sp)
-
 ## End of Operator-Processing Routine ##
+
 
 errorOverflow:
 	la $a0, overflowMessage
