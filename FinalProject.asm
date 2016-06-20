@@ -389,6 +389,23 @@ _processOperator__body:
 
 	jr $s0                                  # … jump into the computed address in our jump-table
 
+_operatorConsumeTwoOperands:
+	move $s7, $ra
+
+	jal consumeWhitepsace                   # advance $a0 forward past any whitespace,
+	jal readInteger                         # advance $a0 past one integer, and store in $v0
+	move $s1, $v0
+	move $a3, $v0
+ 	jal printIntegerDEBUG
+
+	jal consumeWhitepsace                   # advance $a0 forward past any whitespace,
+	jal readInteger                         # advance $a0 past one integer, and store in $v0
+	move $s2, $v0
+	move $a3, $v0
+ 	jal printIntegerDEBUG
+
+	jr $s7
+
 _operatorJumpTable:
 	j _opMultiply   # *
 	j _opPlus       # +
@@ -403,19 +420,9 @@ _opMultiply:
 	j _processOperator__postlude
 
 _opPlus:
-	jal consumeWhitepsace                   # advance $a0 forward past any whitespace,
-	jal readInteger                         # advance $a0 past one integer, and store in $v0
-	move $s1, $v0
-	move $a3, $v0
- 	jal printIntegerDEBUG
+	jal _operatorConsumeTwoOperands
 
-	jal consumeWhitepsace                   # advance $a0 forward past any whitespace,
-	jal readInteger                         # advance $a0 past one integer, and store in $v0
-	move $s2, $v0
-	move $a3, $v0
- 	jal printIntegerDEBUG
-
- 	add $v1, $s1, $s2
+ 	addu $v1, $s1, $s2
  	move $a3, $v1
  	jal printIntegerDEBUG
 
