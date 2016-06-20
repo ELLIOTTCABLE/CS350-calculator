@@ -1,7 +1,10 @@
 # Lucas Myers And Elliot Cable
 # Final Project.asm
 
-.data # Data portion
+
+# /!\ DATA /!\
+# ============
+.data
 
 startMessage:
 	.asciiz "Welcome to the calculator."
@@ -36,29 +39,23 @@ lineBuffer: # Used for storing lines read in from user input
 readIntegerBuffer: # Used for parsing integers
 	.space 10
 
+
+# /!\ PROCEDURES /!\
+# ==================
 .text
 
-## Convenient Syscall Wrappers ##
-# All leaf procedures
-printInteger:
+# === syscall wrappers == #
+printInteger: # @leaf
 	li $v0, 1
 	syscall
 	jr $ra
 
-printIntegerLine:
-	li $v0, 1
-	syscall
-	li $v0, 4
-	la $a0, newline
-	syscall
-	jr $ra
-
-printString:
+printString: # @leaf
 	li $v0, 4
 	syscall
 	jr $ra
 
-printLine:
+printNewline: # @leaf
 	move $s0, $a0
 	li $v0, 4
 	la $a0, newline
@@ -66,38 +63,23 @@ printLine:
 	move $a0, $s0
 	jr $ra
 
-#printDebugLine:
-#	move $s0, $a0                           # Store argument
-#	li $v0, 4
-#
-#	la $a0, DEBUG
-#	syscall
-#
-#	move $a0, $s0                           # Restore argument
-#	syscall
-#
-#	la $a0, newline
-#	syscall
-#
-#	jr $ra
-
-getInteger:
+getInteger: # @leaf
 	li $v0, 5
 	syscall
 	jr $ra
 
-getString:
+getString: # @leaf
 	li $v0, 8
 	syscall
 	jr $ra
-## End of Convenient Syscall Wrappers ##
 
 
-## Integer Parsing Routine ##
-# $a0 -> Start of string to parse as integer
-# $v0 -> Parsed integer, -1 if overflow
-# $v1 -> Pointer to string after parsed integer, 0 if overflow
-# leaf procedure
+# === readInteger == #
+# @leaf
+# @param  $a0   start of string to parse as integer
+# @return $v0   parsed integer, -1 if overflow
+# @return $v1   pointer to string after parsed integer, null if overflow
+
 readInteger:
 	move $v1, $a0                           # Modify v1 return value in-place
 	la $t0, readIntegerBuffer               # Pointer to current read location
@@ -179,13 +161,14 @@ _readIntegerOverflow:
 
 _readIntegerReturn:
 	jr $ra
-## End of Integer Parsing Routine ##
 
-## String Comparison Routine ##
-# $a0 -> Start address of first string
-# $a1 -> Start address of second string
-# $v0 -> 1 if strings are equal, 0 if not
-# Leaf procedure
+
+# === compareStrings == #
+# @leaf
+# @param  $a0   start address of first null-terminated string
+# @param  $a1   start address of second null-terminated string
+# @return $v0   1 if strings are equal, 0 if not
+
 compareStrings:
 	# Move arguments into temporaries
 	move $t0, $a0
@@ -214,11 +197,13 @@ _compareStringsReturnFalse:
 _compareStringsReturnTrue:
 	li $v0, 1
 	jr $ra
-## End of String Comparison Routine ##
 
-## Main Code ##
-# $a0 -> Modified in-place to skip whitespace
-# Leaf procedure
+
+# === consumeWhitespace == #
+# @leaf
+# @param  $a0   pointer to start of string, possibly including whitespace
+# @return $a0   (modified in-place) pointer to first non-whitespace character
+
 consumeWhitepsace:
 	lb $t0, ($a0)
 	li $t1, 32
@@ -233,7 +218,118 @@ _consumeWhitspaceNonWhitespace:
 	jr $ra
 
 
-# Non-leaf procedure
+# === processCommand == #
+# @leaf
+# @param  $a0   pointer to start of string, possibly including whitespace
+
+processCommand:
+	addiu $a0, 1                            # Move reading pointer past colon
+
+	jal consumeWhitepsace
+
+	# Check for first quit command
+	la $a1, quitCommandShort
+	jal compareStrings
+	bnez $v0, exit
+
+	# Check for second quit command
+	la $a1, quitCommandLong
+	jal compareStrings
+	bnez $v0, exit
+
+	# Complain on unrecognized command
+	la $a0, unrecognizedCommandMessage
+	jal printString
+	jal printNewline
+	j mainLoop                              # Back to main loop
+
+
+# === processOperator == #
+# @non-leaf
+# @param  $a0   address of a string beginning with an operator
+
+ processOperator:
+_processOperator__prelude:
+	# NOTE: I'm confused about the conventions w.r.t the frame-pointer; it seems that, generally
+	#       speaking, $fp should point to the *start* of the stack-frame (i.e. the value of $sp
+	#       before any manipulation.) However, this required me to save the value of the
+	#       caller's existing $fp somewhere temporary, so I can replace it, and that was a waste
+	#       of quite a few instructions; so I opted to store that *guaranteed* word (caller's
+	#       frame- pointer) *before* our frame-pointer (i.e. at `-4($fp)`). Thus, arguments
+	#       passed to us on the stack begin with `-8($fp)` instead of the obvious `-4($fp)`.
+	#       (This, as far as I can tell, matches the x86 calling-convention.)
+	addi $sp, $sp, -12      # Allocate stack space for three 4-byte items:
+	sw $fp, 8($sp)          # caller's $fp,
+	move $fp, $sp
+	sw $ra, 4($sp)          # caller's $ra,
+	sw $s0, 0($sp)          # caller's $s0.
+
+_processOperator__body:
+	lb $t0, ($a0)
+
+	# FIXME: This may support the SYMBOL+(REG) syntax?
+	li $t1, 42                              # ASCII bounds-checking:
+	li $t2, 47                              # <-- 42[*] 43[+] 44[,] 45[-] 46[.] 47[/] -->
+	slt $t3, $t0, $t1
+	sgt $t4, $t0, $t2
+	or $t3, $t3, $t4
+
+	bnez $t3, _opERROR                      # ... error if either greater or less than our range
+
+	la $t2, _operatorJumpTable
+	addi $t0, -42                           # index from the ASCII byte into [*, +, _, -, _, /]
+	add $t0, $t0, $t2                       # add that index to the address of our jump-table,
+
+	jr $t0                                  # … jump into the computed address in our jump-table
+
+_operatorJumpTable:
+	j _opMultiply   # *
+	j _opPlus       # +
+	j _opERROR      # ,
+	j _opSubtract   # -
+	j _opERROR      # .
+	j _opDivide     # /
+
+_opMultiply:
+	jal printString
+	jal printNewline
+	j _processOperator__postlude
+
+_opPlus:
+	jal printString
+	jal printNewline
+	j _processOperator__postlude
+
+_opSubtract:
+	jal printString
+	jal printNewline
+	j _processOperator__postlude
+
+_opDivide:
+	jal printString
+	jal printNewline
+	j _processOperator__postlude
+
+_opERROR:
+	la $a0, operatorErrorMessage
+	jal printString
+	jal printNewline
+	j _processOperator__postlude
+
+_processOperator__postlude:
+	move $t0, $fp
+	move $fp, $sp  # our frame's base-pointer
+	addi $sp, $sp, -8
+	sw $t0, 8($sp) # caller's $fp
+	sw $ra, 4($sp)
+	sw $s0, 0($sp)
+
+	lw $s0 0($sp)
+
+
+# /!\ MAIN INPUT LOOP /!\
+# =======================
+
 mainLoop:
 	# Read in a line of input from the user
 	la $a0, lineBuffer
@@ -262,111 +358,10 @@ mainLoop:
 
 	j mainLoop                              # Loop back
 
-## Operator-Processing Routine ##
-# $a0 -> String with operator at start
-# 	@NON-LEAF!
- processOperator:
-_processOperator__prelude:
-	# NOTE: I'm confused about the conventions w.r.t the frame-pointer; it seems that, generally
-	#       speaking, $fp should point to the *start* of the stack-frame (i.e. the value of $sp
-	#       before any manipulation.) However, this required me to save the value of the caller's
-	#       existing $fp somewhere temporary, so I can replace it, and that was a waste of quite
-	#       a few instructions; so I opted to store that *guaranteed* word (caller's frame-
-	#       pointer) *before* our frame-pointer (i.e. at `-4($fp)`). Thus, arguments passed to us
-	#       on the stack begin with `-8($fp)` instead of the obvious `-4($fp)`. (This, as far as I
-	#       can tell, matches the x86 calling-convention.)
-	addi $sp, $sp, -12      # Allocate stack space for three 4-byte items:
-	sw $fp, 8($sp)          # caller's $fp,
-	move $fp, $sp
-	sw $ra, 4($sp)          # caller's $ra,
-	sw $s0, 0($sp)          # caller's $s0.
-
-_processOperator__body:
-	lb $t0, ($a0)
-
-	# FIXME: This may support the SYMBOL+(REG) syntax?
-	li $t1, 42                              # ASCII bounds-checking:
-	li $t2, 47                              # <-- 42  *    43  +    44  ,    45  -    46  .    47  / -->
-	slt $t3, $t0, $t1
-	sgt $t4, $t0, $t2
-	or $t3, $t3, $t4
-
-	bnez $t3, _opERROR                      # ... if either greater or less than our range, jump to error
-
-	la $t2, _operatorJumpTable
-	addi $t0, -42                           # index from the ASCII byte into [*, +, _, -, _, /]
-	add $t0, $t0, $t2                       # add that index to the address of our jump-table,
-
-	jr $t0                                  # … jump into the computed address in our jump-table
-
-_operatorJumpTable:
-	j _opMultiply   # *
-	j _opPlus       # +
-	j _opERROR      # ,
-	j _opSubtract   # -
-	j _opERROR      # .
-	j _opDivide     # /
-
-_opMultiply:
-	jal printString
-	jal printLine
-	j _processOperator__postlude
-_opPlus:
-	jal printString
-	jal printLine
-	j _processOperator__postlude
-_opSubtract:
-	jal printString
-	jal printLine
-	j _processOperator__postlude
-_opDivide:
-	jal printString
-	jal printLine
-	j _processOperator__postlude
-
-_opERROR:
-	la $a0, operatorErrorMessage
-	jal printString
-	jal printLine
-	j _processOperator__postlude
-
-_processOperator__postlude:
-	move $t0, $fp
-	move $fp, $sp  # our frame's base-pointer
-	addi $sp, $sp, -8
-	sw $t0, 8($sp) # caller's $fp
-	sw $ra, 4($sp)
-	sw $s0, 0($sp)
-
-	lw $s0 0($sp)
-## End of Operator-Processing Routine ##
-
-
 errorOverflow:
 	la $a0, overflowMessage
 	jal printString
-	jal printLine
-	j mainLoop                              # Back to main loop
-
-processCommand:
-	addiu $a0, 1                            # Move reading pointer past colon
-
-	jal consumeWhitepsace
-
-	# Check for first quit command
-	la $a1, quitCommandShort
-	jal compareStrings
-	bnez $v0, exit
-
-	# Check for second quit command
-	la $a1, quitCommandLong
-	jal compareStrings
-	bnez $v0, exit
-
-	# Complain on unrecognized command
-	la $a0, unrecognizedCommandMessage
-	jal printString
-	jal printLine
+	jal printNewline
 	j mainLoop                              # Back to main loop
 
 main:
@@ -375,14 +370,15 @@ main:
 
 	la $a0, startMessage
 	jal printString
-	jal printLine
+	jal printNewline
 	j mainLoop                              # Start main loop
 
 exit:
 	la $a0, endMessage
 	jal printString
-	jal printLine
+	jal printNewline
 	li $v0, 10
 	syscall
+
 
 # vim: set shiftwidth=8 tabstop=8 noexpandtab softtabstop& list listchars=tab\: ·:
