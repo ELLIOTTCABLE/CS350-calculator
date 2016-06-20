@@ -45,7 +45,7 @@ readIntegerBuffer: # Used for parsing integers
 .text
 
 # === syscall wrappers == #
-# All of these stomp on $t0, and some on $t1 (and, of course, on $ra.)
+# All of these stomp on $t0, and some on $t1 (and, of course, on $ra.) printDEBUG expects $a3.
 
 printInteger: # @leaf
 	move $t0, $v0
@@ -68,6 +68,24 @@ printNewline: # @leaf
 	move $t1, $v0
 
 	li $v0, 4
+	la $a0, newline
+	syscall
+
+	move $v0, $t1
+	move $a0, $t0
+	jr $ra
+
+printDEBUG: # @leaf
+	move $t0, $a0
+	move $t1, $v0
+
+	li $v0, 4
+	la $a0, debugPrefix
+	syscall
+
+	move $a0, $a3
+	syscall
+
 	la $a0, newline
 	syscall
 
@@ -355,13 +373,8 @@ mainLoop:
 	# Discard leading whitespace
 	jal consumeWhitepsace
 
-	# Print out what we read in (debugging)
-	move $t9, $a0
-	la $a0, debugPrefix
-	jal printString
-	move $a0, $t9
-	jal printString
-	jal printNewline
+	move $a3, $a0
+	jal printDEBUG
 
 	# Check if this is a command
 	lb $t0, ($a0)
@@ -375,8 +388,6 @@ mainLoop:
 	#jal readInteger
 	#li $t0, -1
 	#beq $t0, $v0, errorOverflow            # Message on overflow
-
-	# Print our parsed integer (for debugging)
 
 	j mainLoop                              # Loop back
 
