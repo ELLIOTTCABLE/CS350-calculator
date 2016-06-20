@@ -321,7 +321,7 @@ _opERROR:
 _processOperator__postlude:
 	lw $s0, -4($fp)
 	lw $ra, -0($fp)
-	sw $fp,  4($fp) # loads the old fp *based on* the current fp
+	lw $fp,  4($fp) # loads the old fp *based on* the current fp
 	addi $sp, $sp, 12
 
 	jr $ra
