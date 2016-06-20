@@ -294,30 +294,31 @@ _processOperator__prelude:
 	#       frame- pointer) *before* our frame-pointer (i.e. at `-4($fp)`). Thus, arguments
 	#       passed to us on the stack begin with `-8($fp)` instead of the obvious `-4($fp)`.
 	#       (This, as far as I can tell, matches the x86 calling-convention.)
-	addi $sp, $sp, -12      # Allocate stack space for three 4-byte items:
-	sw $fp,  8($sp)          # caller's $fp,
+	addi $sp, $sp, -16      # Allocate stack space for four 4-byte items:
+	sw $fp, 12($sp)         # caller's $fp,
 	move $fp, $sp
-	sw $ra, -0($fp)          # caller's $ra,
-	sw $s0, -4($fp)          # caller's $s0.
+	sw $ra, -0($fp)         # caller's $ra,
+	sw $s0, -4($fp)         # caller's $s0,
+	sw $s1, -8($fp)         # caller's $s1.
 
 _processOperator__body:
-	lb $t0, ($a0)
+	lb $s0, ($a0)                           # Going to keep the current char in $s0
 
 	# FIXME: This may support the SYMBOL+(REG) syntax?
-	li $t1, 42                              # ASCII bounds-checking:
-	li $t2, 47                              # <-- 42[*] 43[+] 44[,] 45[-] 46[.] 47[/] -->
-	slt $t3, $t0, $t1
-	sgt $t4, $t0, $t2
-	or $t3, $t3, $t4
+	li $t0, 42                              # ASCII bounds-checking:
+	li $t1, 47                              # <-- 42[*] 43[+] 44[,] 45[-] 46[.] 47[/] -->
+	slt $t2, $s0, $t0
+	sgt $t3, $s0, $t1
+	or $t2, $t2, $t3
 
-	bnez $t3, _opERROR                      # ... error if either greater or less than our range
+	bnez $t2, _opERROR                      # ... error if either greater or less than our range
 
-	la $t2, _operatorJumpTable
-	addi $t0, -42                           # index from the ASCII byte into [*, +, _, -, _, /]
-	mul $t0, $t0, 4
-	add $t0, $t0, $t2                       # add that index to the address of our jump-table,
+	la $t1, _operatorJumpTable
+	addi $s0, -42                           # index from the ASCII byte into [*, +, _, -, _, /]
+	mul $s0, $s0, 4
+	add $s0, $s0, $t1                       # add that index to the address of our jump-table,
 
-	jr $t0                                  # … jump into the computed address in our jump-table
+	jr $s0                                  # … jump into the computed address in our jump-table
 
 _operatorJumpTable:
 	j _opMultiply   # *
@@ -354,10 +355,11 @@ _opERROR:
 	j _processOperator__postlude
 
 _processOperator__postlude:
+	lw $s1, -8($fp)
 	lw $s0, -4($fp)
 	lw $ra, -0($fp)
 	lw $fp,  4($fp) # loads the old fp *based on* the current fp
-	addi $sp, $sp, 12
+	addi $sp, $sp, 16
 
 	jr $ra
 
@@ -377,10 +379,10 @@ mainLoop:
 	move $a3, $a0
 	jal printDEBUG
 
-	# Check if this is a command
-	lb $t0, ($a0)
-	li $t1, 58                              # ":" character
-	beq $t0, $t1, processCommand
+#	# Check if this is a command
+#	lb $t0, ($a0)
+#	li $t1, 58                              # ":" character
+#	beq $t0, $t1, processCommand
 
 	jal processOperator
 
