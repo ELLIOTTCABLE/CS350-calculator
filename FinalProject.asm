@@ -326,7 +326,9 @@ _opDivide:
 
 _opERROR:
 	la $a0, operatorErrorMessage
-	jal 
+	jal printString
+	jal printLine
+	j _processOperator__postlude
 
 _processOperator__postlude:
 	move $t0, $fp
