@@ -339,6 +339,14 @@ mainLoop:
 	# Discard leading whitespace
 	jal consumeWhitepsace
 
+	# Print out what we read in (debugging)
+	move $t9, $a0
+	la $a0, debugPrefix
+	jal printString
+	move $a0, $t9
+	jal printString
+	jal printNewline
+
 	# Check if this is a command
 	lb $t0, ($a0)
 	li $t1, 58                              # ":" character
@@ -353,12 +361,6 @@ mainLoop:
 	#beq $t0, $v0, errorOverflow            # Message on overflow
 
 	# Print our parsed integer (for debugging)
-	la $a0, debugPrefix
-	jal printString
-	jal printNewline
-	move $a0, $v0
-	jal printString
-	jal printNewline
 
 	j mainLoop                              # Loop back
 
