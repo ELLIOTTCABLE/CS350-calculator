@@ -314,6 +314,7 @@ _processOperator__body:
 
 	la $t2, _operatorJumpTable
 	addi $t0, -42                           # index from the ASCII byte into [*, +, _, -, _, /]
+	mul $t0, $t0, 4
 	add $t0, $t0, $t2                       # add that index to the address of our jump-table,
 
 	jr $t0                                  # … jump into the computed address in our jump-table
