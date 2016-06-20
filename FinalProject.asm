@@ -7,7 +7,7 @@
 .data
 
 startMessage:
-	.asciiz "Welcome to the calculator."
+	.asciiz "Welcome to the calculator. Type your calculations in Reverse Polish Notation (i.e. prefix notation), with an operator followed by two integer operands. The result will appear on the next line. For instance, '+ 2 3' will evaluate to '5' on a new line. The +, -, *, and / operators are accepted."
 
 endMessage:
 	.asciiz "Goodbye!"
@@ -19,7 +19,7 @@ overflowMessage:
 	.asciiz "Overflow occured when reading an integer; try smaller numbers."
 
 operatorErrorMessage:
-	.asciiz "Format: <+ | - | * | /> <number> <number>."
+	.asciiz "Format: [+ | - | * | /] <integer> <integer>."
 
 promptPrefix:
 	.asciiz "=) "
@@ -44,6 +44,9 @@ lineBuffer: # Used for storing lines read in from user input
 
 readIntegerBuffer: # Used for parsing integers
 	.space 10
+
+DEBUGenable:
+	.byte 0
 
 
 # /!\ PROCEDURES /!\
@@ -81,7 +84,30 @@ printNewline: # @leaf
 	move $a0, $t0
 	jr $ra
 
+printResult: # @leaf
+	move $t0, $a0
+	move $t1, $v0
+
+	li $v0, 4
+	la $a0, resultPrefix
+	syscall
+
+  li $v0, 1
+	move $a0, $t0
+	syscall
+
+  li $v0, 4
+	la $a0, newline
+	syscall
+
+	move $v0, $t1
+	move $a0, $t0
+	jr $ra
+
 printStringDEBUG: # @leaf
+	lb $t0, DEBUGenable
+	beqz $t0, printStringDEBUGEnd
+
 	move $t0, $a0
 	move $t1, $v0
 
@@ -97,9 +123,14 @@ printStringDEBUG: # @leaf
 
 	move $v0, $t1
 	move $a0, $t0
+
+	printStringDEBUGEnd:
 	jr $ra
 
 printIntegerDEBUG: # @leaf
+	lb $t0, DEBUGenable
+	beqz $t0, printStringDEBUGEnd
+
 	move $t0, $a0
 	move $t1, $v0
 
@@ -117,6 +148,8 @@ printIntegerDEBUG: # @leaf
 
 	move $v0, $t1
 	move $a0, $t0
+
+	printIntegerDEBUGEnd:
 	jr $ra
 
 #getInteger: # @leaf
@@ -244,6 +277,18 @@ _readIntegerOverflow:
 _readIntegerReturn:
 	mul $v0, $v0, $t9
 	jr $ra
+
+
+# === checkOverflow == #
+# Given two arguments and a result-value, this will print an error and jump to the given return-address
+# 
+# @leaf
+# @param  $a1   the first operand used,
+# @param  $a2   the second operand,
+# @param  $a3   the result to be checked
+# @target $v0   the exceptional-address to jump to if overflow is detected
+checkOverflow:
+	# NYI
 
 
 # === compareStrings == #
@@ -378,47 +423,121 @@ _operatorJumpTable:
 	j _opDivide     # /
 
 _opMultiply:
-	jal printString
-	jal printNewline
-	j _processOperator__postlude
-
-_opPlus:
-	# FIXME: WHY. DOES. THIS. RETURN. FREAKING. ZERO. ONLY.
-	jal consumeWhitepsace                   # advance $a0 forward past any whitespace,
-	jal readInteger                         # advance $a0 past one integer, and store in $v0
+	jal consumeWhitepsace
+	jal readInteger
 	move $s1, $v0
 	move $a3, $v0
- 	jal printIntegerDEBUG
+	jal printIntegerDEBUG
 
-	jal consumeWhitepsace                   # advance $a0 forward past any whitespace,
-	jal readInteger                         # advance $a0 past one integer, and store in $v0
+	jal consumeWhitepsace
+	jal readInteger
 	move $s2, $v0
 	move $a3, $v0
- 	jal printIntegerDEBUG
+	jal printIntegerDEBUG
 
- 	add $v1, $s1, $s2
- 	move $a3, $v1
- 	jal printIntegerDEBUG
+	mul $v1, $s1, $s2
+	move $a3, $v1
+	jal printIntegerDEBUG
 
- 	# Overflow-checking NYI
+	 	# Overflow-checking NYI
 # 	move $a1, $s1
 # 	move $a2, $s2
 # 	move $a3, $v1
 # 	la $v0, _processOperator__overflow
 # 	jal checkOverflow
 
-	# NYI
+	#move $a0, $a3
+	#jal printResult
+
+	j _processOperator__postlude
+
+_opPlus:
+	jal consumeWhitepsace
+	jal readInteger
+	move $s1, $v0
+	move $a3, $v0
+	jal printIntegerDEBUG
+
+	jal consumeWhitepsace
+	jal readInteger
+	move $s2, $v0
+	move $a3, $v0
+	jal printIntegerDEBUG
+
+	addu $v1, $s1, $s2
+	move $a3, $v1
+	jal printIntegerDEBUG
+
+	 	# Overflow-checking NYI
+# 	move $a1, $s1
+# 	move $a2, $s2
+# 	move $a3, $v1
+# 	la $v0, _processOperator__overflow
+# 	jal checkOverflow
+
+	#move $a0, $a3
+	#jal printResult
 
 	j _processOperator__postlude
 
 _opSubtract:
-	jal printString
-	jal printNewline
+	jal consumeWhitepsace
+	jal readInteger
+	move $s1, $v0
+	move $a3, $v0
+	jal printIntegerDEBUG
+
+	jal consumeWhitepsace
+	jal readInteger
+	move $s2, $v0
+	move $a3, $v0
+	jal printIntegerDEBUG
+
+	neg $s2, $s2
+	addu $v1, $s1, $s2
+	move $a3, $v1
+	jal printIntegerDEBUG
+
+	 	# Overflow-checking NYI
+# 	move $a1, $s1
+# 	move $a2, $s2
+# 	move $a3, $v1
+# 	la $v0, _processOperator__overflow
+# 	jal checkOverflow
+
+	#move $a0, $a3
+	#jal printResult
+
 	j _processOperator__postlude
 
+
 _opDivide:
-	jal printString
-	jal printNewline
+	jal consumeWhitepsace
+	jal readInteger
+	move $s1, $v0
+	move $a3, $v0
+	jal printIntegerDEBUG
+
+	jal consumeWhitepsace
+	jal readInteger
+	move $s2, $v0
+	move $a3, $v0
+	jal printIntegerDEBUG
+
+	div $v1, $s1, $s2
+	move $a3, $v1
+	jal printIntegerDEBUG
+
+	 	# Overflow-checking NYI
+# 	move $a1, $s1
+# 	move $a2, $s2
+# 	move $a3, $v1
+# 	la $v0, _processOperator__overflow
+# 	jal checkOverflow
+
+	#move $a0, $a3
+	#jal printResult
+
 	j _processOperator__postlude
 
 _opERROR:
