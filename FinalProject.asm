@@ -45,7 +45,7 @@ readIntegerBuffer: # Used for parsing integers
 .text
 
 # === syscall wrappers == #
-# All of these stomp on $t0, and some on $t1 (and, of course, on $ra.) printDEBUG expects $a3.
+# All of these stomp on $t0, and some on $t1 (and, of course, on $ra.) print(String|Integer)DEBUG expect $a3.
 
 printInteger: # @leaf
 	move $t0, $v0
@@ -75,7 +75,7 @@ printNewline: # @leaf
 	move $a0, $t0
 	jr $ra
 
-printDEBUG: # @leaf
+printStringDEBUG: # @leaf
 	move $t0, $a0
 	move $t1, $v0
 
@@ -86,6 +86,26 @@ printDEBUG: # @leaf
 	move $a0, $a3
 	syscall
 
+	la $a0, newline
+	syscall
+
+	move $v0, $t1
+	move $a0, $t0
+	jr $ra
+
+printIntegerDEBUG: # @leaf
+	move $t0, $a0
+	move $t1, $v0
+
+	li $v0, 4
+	la $a0, debugPrefix
+	syscall
+
+  li $v0, 1
+	move $a0, $a3
+	syscall
+
+  li $v0, 4
 	la $a0, newline
 	syscall
 
@@ -297,6 +317,7 @@ processCommand:
 # === processOperator == #
 # @non-leaf
 # @param  $a0   address of a string beginning with an operator
+# @return $v1   result of calculation
 
  processOperator:
 _processOperator__prelude:
@@ -352,12 +373,26 @@ _opPlus:
 	# FIXME: WHY. DOES. THIS. RETURN. FREAKING. ZERO. ONLY.
 	jal consumeWhitepsace                   # advance $a0 forward past any whitespace,
 	jal readInteger                         # advance $a0 past one integer, and store in $v0
+	move $s1, $v0
+	move $a3, $v0
+ 	jal printIntegerDEBUG
 
- 	move $a0, $v0
- 	jal printInteger
+	jal consumeWhitepsace                   # advance $a0 forward past any whitespace,
+	jal readInteger                         # advance $a0 past one integer, and store in $v0
+	move $s2, $v0
+	move $a3, $v0
+ 	jal printIntegerDEBUG
 
-	li $t0, -1
-	beq $t0, $v0, _processOperator__overflow
+ 	add $v1, $s1, $s2
+ 	move $a3, $v1
+ 	jal printIntegerDEBUG
+
+ 	# Overflow-checking NYI
+# 	move $a1, $s1
+# 	move $a2, $s2
+# 	move $a3, $v1
+# 	la $v0, _processOperator__overflow
+# 	jal checkOverflow
 
 	# NYI
 
@@ -408,7 +443,7 @@ mainLoop:
 	jal consumeWhitepsace
 
 	move $a3, $a0
-	jal printDEBUG
+	jal printStringDEBUG
 
 #	# Check if this is a command
 #	lb $t0, ($a0)
