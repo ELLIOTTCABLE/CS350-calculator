@@ -81,6 +81,26 @@ printNewline: # @leaf
 	move $a0, $t0
 	jr $ra
 
+printResult: # @leaf
+	move $t0, $a0
+	move $t1, $v0
+
+	li $v0, 4
+	la $a0, resultPrefix
+	syscall
+
+	li $v0, 1
+	move $a0, $t0
+	syscall
+
+	li $v0, 4
+	la $a0, newline
+	syscall
+
+	move $v0, $t1
+	move $a0, $t0
+	jr $ra
+
 printStringDEBUG: # @leaf
 	move $t0, $a0
 	move $t1, $v0
@@ -107,11 +127,11 @@ printIntegerDEBUG: # @leaf
 	la $a0, debugPrefix
 	syscall
 
-  li $v0, 1
+	li $v0, 1
 	move $a0, $a3
 	syscall
 
-  li $v0, 4
+	li $v0, 4
 	la $a0, newline
 	syscall
 
@@ -383,7 +403,6 @@ _opMultiply:
 	j _processOperator__postlude
 
 _opPlus:
-	# FIXME: WHY. DOES. THIS. RETURN. FREAKING. ZERO. ONLY.
 	jal consumeWhitepsace                   # advance $a0 forward past any whitespace,
 	jal readInteger                         # advance $a0 past one integer, and store in $v0
 	move $s1, $v0
@@ -407,7 +426,8 @@ _opPlus:
 # 	la $v0, _processOperator__overflow
 # 	jal checkOverflow
 
-	# NYI
+ 	move $a0, $v1
+ 	jal printResult
 
 	j _processOperator__postlude
 
