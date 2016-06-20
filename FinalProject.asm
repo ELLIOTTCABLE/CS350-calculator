@@ -21,8 +21,8 @@ overflowMessage:
 operatorErrorMessage:
 	.asciiz "Format: <+ | - | * | /> <number> <number>."
 
-#DEBUG:
-#	.asciiz "-- "
+debugPrefix:
+	.asciiz "-- "
 
 newline:
 	.asciiz "\n"
@@ -261,10 +261,10 @@ _processOperator__prelude:
 	#       passed to us on the stack begin with `-8($fp)` instead of the obvious `-4($fp)`.
 	#       (This, as far as I can tell, matches the x86 calling-convention.)
 	addi $sp, $sp, -12      # Allocate stack space for three 4-byte items:
-	sw $fp, 8($sp)          # caller's $fp,
+	sw $fp,  8($sp)          # caller's $fp,
 	move $fp, $sp
-	sw $ra, 4($sp)          # caller's $ra,
-	sw $s0, 0($sp)          # caller's $s0.
+	sw $ra, -0($fp)          # caller's $ra,
+	sw $s0, -4($fp)          # caller's $s0.
 
 _processOperator__body:
 	lb $t0, ($a0)
@@ -319,14 +319,12 @@ _opERROR:
 	j _processOperator__postlude
 
 _processOperator__postlude:
-	move $t0, $fp
-	move $fp, $sp  # our frame's base-pointer
-	addi $sp, $sp, -8
-	sw $t0, 8($sp) # caller's $fp
-	sw $ra, 4($sp)
-	sw $s0, 0($sp)
+	lw $s0, -4($fp)
+	lw $ra, -0($fp)
+	sw $fp,  4($fp) # loads the old fp *based on* the current fp
+	addi $sp, $sp, 12
 
-	lw $s0 0($sp)
+	jr $ra
 
 
 # /!\ MAIN INPUT LOOP /!\
@@ -355,8 +353,12 @@ mainLoop:
 	#beq $t0, $v0, errorOverflow            # Message on overflow
 
 	# Print our parsed integer (for debugging)
-	#move $a0, $v0
-	#jal printDebugLine
+	la $a0, debugPrefix
+	jal printString
+	jal printNewline
+	move $a0, $v0
+	jal printString
+	jal printNewline
 
 	j mainLoop                              # Loop back
 
@@ -367,9 +369,6 @@ errorOverflow:
 	j mainLoop                              # Back to main loop
 
 main:
-	li $a0, 1234
-	jal printDebugLine
-
 	la $a0, startMessage
 	jal printString
 	jal printNewline
