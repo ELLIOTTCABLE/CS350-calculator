@@ -115,6 +115,8 @@ getString: # @leaf
 # @param  $a0   start of string to parse as integer
 # @return $v0   parsed integer, -1 if overflow
 # @return $v1   pointer to string after parsed integer, null if overflow
+#---
+# FIXME: Modify $a0 in-place, like the rest of the procedures.
 
 readInteger:
 	move $v1, $a0                           # Modify v1 return value in-place
@@ -302,7 +304,7 @@ _processOperator__prelude:
 	sw $s1, -8($fp)         # caller's $s1.
 
 _processOperator__body:
-	lb $s0, ($a0)                           # Going to keep the current char in $s0
+	lb $s0, ($a0)                           # Going to keep the operator char in $s0
 
 	# FIXME: This may support the SYMBOL+(REG) syntax?
 	li $t0, 42                              # ASCII bounds-checking:
@@ -334,8 +336,18 @@ _opMultiply:
 	j _processOperator__postlude
 
 _opPlus:
-	jal printString
-	jal printNewline
+	# FIXME: WHY. DOES. THIS. RETURN. FREAKING. ZERO. ONLY.
+	jal consumeWhitepsace                   # advance $a0 forward past any whitespace,
+	jal readInteger                         # advance $a0 past one integer, and store in $v0
+
+#	move $a0, $v0
+#	jal printInteger
+
+	li $t0, -1
+	beq $t0, $v0, _processOperator__overflow
+
+	# NYI
+
 	j _processOperator__postlude
 
 _opSubtract:
@@ -350,6 +362,12 @@ _opDivide:
 
 _opERROR:
 	la $a0, operatorErrorMessage
+	jal printString
+	jal printNewline
+	j _processOperator__postlude
+
+_processOperator__overflow:
+	la $a0, overflowMessage
 	jal printString
 	jal printNewline
 	j _processOperator__postlude
