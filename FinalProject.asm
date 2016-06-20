@@ -13,7 +13,7 @@ endMessage:
 	.asciiz "Goodbye!"
 
 unrecognizedCommandMessage:
-	.asciiz "Command not recognized."
+	.asciiz "Unsupported command. Commands: q, quit"
 
 overflowMessage:
 	.asciiz "Overflow occured when reading an integer; try smaller numbers."
@@ -92,11 +92,11 @@ printResult: # @leaf
 	la $a0, resultPrefix
 	syscall
 
-  li $v0, 1
+	li $v0, 1
 	move $a0, $t0
 	syscall
 
-  li $v0, 4
+	li $v0, 4
 	la $a0, newline
 	syscall
 
@@ -414,6 +414,23 @@ _processOperator__body:
 
 	jr $s0                                  # … jump into the computed address in our jump-table
 
+_operatorConsumeTwoOperands:
+	move $s7, $ra
+
+	jal consumeWhitepsace                   # advance $a0 forward past any whitespace,
+	jal readInteger                         # advance $a0 past one integer, and store in $v0
+	move $s1, $v0
+	move $a3, $v0
+ 	jal printIntegerDEBUG
+
+	jal consumeWhitepsace                   # advance $a0 forward past any whitespace,
+	jal readInteger                         # advance $a0 past one integer, and store in $v0
+	move $s2, $v0
+	move $a3, $v0
+ 	jal printIntegerDEBUG
+
+	jr $s7
+
 _operatorJumpTable:
 	j _opMultiply   # *
 	j _opPlus       # +
@@ -423,17 +440,7 @@ _operatorJumpTable:
 	j _opDivide     # /
 
 _opMultiply:
-	jal consumeWhitepsace
-	jal readInteger
-	move $s1, $v0
-	move $a3, $v0
-	jal printIntegerDEBUG
-
-	jal consumeWhitepsace
-	jal readInteger
-	move $s2, $v0
-	move $a3, $v0
-	jal printIntegerDEBUG
+	jal _operatorConsumeTwoOperands
 
 	mul $v1, $s1, $s2
 	move $a3, $v1
@@ -452,17 +459,7 @@ _opMultiply:
 	j _processOperator__postlude
 
 _opPlus:
-	jal consumeWhitepsace
-	jal readInteger
-	move $s1, $v0
-	move $a3, $v0
-	jal printIntegerDEBUG
-
-	jal consumeWhitepsace
-	jal readInteger
-	move $s2, $v0
-	move $a3, $v0
-	jal printIntegerDEBUG
+	jal _operatorConsumeTwoOperands
 
 	addu $v1, $s1, $s2
 	move $a3, $v1
@@ -475,23 +472,13 @@ _opPlus:
 # 	la $v0, _processOperator__overflow
 # 	jal checkOverflow
 
-	#move $a0, $a3
-	#jal printResult
+ 	move $a0, $v1
+ 	jal printResult
 
 	j _processOperator__postlude
 
 _opSubtract:
-	jal consumeWhitepsace
-	jal readInteger
-	move $s1, $v0
-	move $a3, $v0
-	jal printIntegerDEBUG
-
-	jal consumeWhitepsace
-	jal readInteger
-	move $s2, $v0
-	move $a3, $v0
-	jal printIntegerDEBUG
+	jal _operatorConsumeTwoOperands
 
 	neg $s2, $s2
 	addu $v1, $s1, $s2
@@ -512,17 +499,7 @@ _opSubtract:
 
 
 _opDivide:
-	jal consumeWhitepsace
-	jal readInteger
-	move $s1, $v0
-	move $a3, $v0
-	jal printIntegerDEBUG
-
-	jal consumeWhitepsace
-	jal readInteger
-	move $s2, $v0
-	move $a3, $v0
-	jal printIntegerDEBUG
+		jal _operatorConsumeTwoOperands
 
 	div $v1, $s1, $s2
 	move $a3, $v1
@@ -580,10 +557,10 @@ mainLoop:
 	move $a3, $a0
 	jal printStringDEBUG
 
-#	# Check if this is a command
-#	lb $t0, ($a0)
-#	li $t1, 58                              # ":" character
-#	beq $t0, $t1, processCommand
+	# Check if this is a command
+	lb $t0, ($a0)
+	li $t1, 58                              # ":" character
+	beq $t0, $t1, processCommand
 
 	jal processOperator
 
