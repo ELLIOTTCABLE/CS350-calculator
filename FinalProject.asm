@@ -21,8 +21,14 @@ overflowMessage:
 operatorErrorMessage:
 	.asciiz "Format: <+ | - | * | /> <number> <number>."
 
+promptPrefix:
+	.asciiz "=) "
+
+resultPrefix:
+	.asciiz "=O "
+
 debugPrefix:
-	.asciiz "-- "
+	.asciiz "!! "
 
 newline:
 	.asciiz "\n"
@@ -113,20 +119,27 @@ printIntegerDEBUG: # @leaf
 	move $a0, $t0
 	jr $ra
 
-getInteger: # @leaf
-	move $t0, $v0
-	li $v0, 5
+#getInteger: # @leaf
+#	move $t0, $v0
+#	li $v0, 5
+#	syscall
+#
+#	move $v0, $t0
+#	jr $ra
+
+getLine: # @leaf
+	move $t0, $a0
+	move $t1, $v0
+
+	li $v0, 4 # println
+	la $a0, promptPrefix
 	syscall
 
-	move $v0, $t0
-	jr $ra
-
-getString: # @leaf
-	move $t0, $v0
-	li $v0, 8
+	move $a0, $t0
+	li $v0, 8 # readln
 	syscall
 
-	move $v0, $t0
+	move $v0, $t1
 	jr $ra
 
 
@@ -437,7 +450,10 @@ mainLoop:
 	# Read in a line of input from the user
 	la $a0, lineBuffer
 	la $a1, 1024
-	jal getString
+	jal getLine
+
+	move $a3, $a0
+	jal printStringDEBUG
 
 	# Discard leading whitespace
 	jal consumeWhitepsace
