@@ -453,8 +453,8 @@ _opMultiply:
 # 	la $v0, _processOperator__overflow
 # 	jal checkOverflow
 
-	#move $a0, $a3
-	#jal printResult
+	move $a0, $a3
+	jal printResult
 
 	j _processOperator__postlude
 
@@ -492,8 +492,8 @@ _opSubtract:
 # 	la $v0, _processOperator__overflow
 # 	jal checkOverflow
 
-	#move $a0, $a3
-	#jal printResult
+	move $a0, $a3
+	jal printResult
 
 	j _processOperator__postlude
 
@@ -512,8 +512,8 @@ _opDivide:
 # 	la $v0, _processOperator__overflow
 # 	jal checkOverflow
 
-	#move $a0, $a3
-	#jal printResult
+	move $a0, $a3
+	jal printResult
 
 	j _processOperator__postlude
 
