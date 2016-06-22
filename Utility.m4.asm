@@ -296,22 +296,24 @@ _compareStringsReturnTrue:
 	jr $ra
 
 
-# ### consumeWhitespace ###
+# ### consumeCharacters ###
 # @leaf
 # @param  $a0   pointer to start of string, possibly including whitespace
-# @return $a0   (modified in-place) pointer to first non-whitespace character
+# @param  $a1   if 0, will consume only whitespace; if 1, will consume only *non-whitespace*
+# @return $a0   (modified in-place) pointer to first non-matching character
+# @stomps $t0..2
 
-consumeWhitepsace:
+consumeCharacters:
 	lb $t0, ($a0)
 	li $t1, 32
 	li $t2, 9
 	seq $t1, $t0, $t1
 	seq $t2, $t0, $t2
 	or $t0, $t1, $t2
-	beqz $t0, _consumeWhitspaceNonWhitespace
+	beq $a1, $t0, _consumeEnd
 	addi $a0, 1
-	j consumeWhitepsace
-_consumeWhitspaceNonWhitespace:
+	j consumeCharacters
+_consumeEnd:
 	jr $ra
 
 dnl vim: set shiftwidth=8 tabstop=8 noexpandtab softtabstop& list listchars=tab\: ·:

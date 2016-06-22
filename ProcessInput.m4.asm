@@ -21,7 +21,8 @@ operatorErrorMessage:
 processCommand:
 	addiu $a0, 1                            # Move reading pointer past colon
 
-	jal consumeWhitepsace
+	li $a1, 0
+	jal consumeCharacters
 
 	# Check for first quit command
 	la $a1, quitCommandShort
@@ -85,13 +86,15 @@ _processOperator__body:
 _operatorConsumeTwoOperands:
 	move $s7, $ra
 
-	jal consumeWhitepsace                   # advance $a0 forward past any whitespace,
+	li $a1, 0
+	jal consumeCharacters                   # advance $a0 forward past any whitespace,
 	jal readInteger                         # advance $a0 past one integer, and store in $v0
 	move $s1, $v0
 	move $a3, $v0
  	jal printIntegerDEBUG
 
-	jal consumeWhitepsace                   # advance $a0 forward past any whitespace,
+	li $a1, 0
+	jal consumeCharacters                   # advance $a0 forward past any whitespace,
 	jal readInteger                         # advance $a0 past one integer, and store in $v0
 	move $s2, $v0
 	move $a3, $v0

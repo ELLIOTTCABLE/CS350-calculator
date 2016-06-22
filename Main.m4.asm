@@ -39,7 +39,8 @@ mainLoop:
 	jal printStringDEBUG
 
 	# Discard leading whitespace
-	jal consumeWhitepsace
+	li $a1, 0
+	jal consumeCharacters
 
 	move $a3, $a0
 	jal printStringDEBUG
