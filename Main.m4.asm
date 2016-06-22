@@ -1,4 +1,4 @@
-FILE(<!MAIN.ASM!>)
+FILE(<!MAIN.M4.ASM!>)
 
 # DATA
 # ----

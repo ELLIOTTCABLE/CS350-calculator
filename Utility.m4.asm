@@ -1,6 +1,6 @@
 define(<!FILE!>, <!<!#!> /!\ $1 /!\
 <!#!> ====substr(==============================,0,len($1))====!>)dnl
-FILE(<!UTILITY.ASM!>)
+FILE(<!UTILITY.M4.ASM!>)
 
 # DATA
 # ----

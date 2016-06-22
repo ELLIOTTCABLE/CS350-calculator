@@ -1,4 +1,4 @@
-FILE(<!ProcessInput.ASM!>)
+FILE(<!PROCESSINPUT.M4.ASM!>)
 
 # DATA
 # ----
