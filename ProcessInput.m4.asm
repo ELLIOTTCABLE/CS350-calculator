@@ -84,7 +84,7 @@ _processOperator__body:
 	jr $s0                                  # … jump into the computed address in our jump-table
 
 _operatorConsumeTwoOperands:
-	move $s7, $ra
+	move $s5, $ra
 
 	li $a1, 0
 	jal consumeCharacters                   # advance $a0 forward past any whitespace,
@@ -100,7 +100,7 @@ _operatorConsumeTwoOperands:
 	move $a3, $v0
  	jal printIntegerDEBUG
 
-	jr $s7
+	jr $s5
 
 _operatorJumpTable:
 	j _opMultiply   # *
