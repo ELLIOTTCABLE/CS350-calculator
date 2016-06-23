@@ -1,9 +1,13 @@
 FILE(<!MATH.M4.ASM!>)
 
+	.data
+stringificationBuffer:
+	.space 1024
+
 	.text
 
 performAdd:
-	addu $v0, $a1, $a2
+	addu $v0, $a0, $a1
 
 	# Sign bits
 	and $t0, $v0, 0x80000000
@@ -19,16 +23,40 @@ performAdd:
 	jr $ra
 
 performSub:
-	neg $a2, $a2
+	neg $a1, $a1
 	j performAdd
 
 performMul:
-	mult $a1, $a2
+	mult $a0, $a1
+	mflo $v0
+
+	# Sign bits
+	and $t0, $v0, 0x80000000
+	and $t1, $a1, 0x80000000
+	and $t2, $a2, 0x80000000
+
+	xor $t1, $t1, $t2
+	sne $t0, $t0, $t1              # Result sign is incorrect
+
+	mfhi $t1
+	sne $t1, $t1, $zero            # Result has high bits
+
+	or $t0, $t0, $t1
+	bnez $t0, __mul_overflow
+
+	jr $ra
+
+performDiv:
+	div $v0, $a0, $a1
+
+	jr $ra
+
+
+performBinaryPrint:
+	move $v0, $a0
 	
-	and $t0, $a1, 0x80000000
-	and $t1, $a2, 0x80000000
+	la $a1, stringificationBuffer
+	move $t8, $ra
+	jal stringifyBinary
 
 	
-
-	mflo $t0
-

@@ -246,20 +246,6 @@ _readIntegerReturn:
 	mul $v0, $v0, $t9
 	jr $ra
 
-
-# ### checkOverflow ###
-# Given two arguments and a result-value, this will print an error and jump to the given return-address
-#
-# @leaf
-# @param  $a1   the first operand used,
-# @param  $a2   the second operand,
-# @param  $a3   the result to be checked
-# @target $v0   the exceptional-address to jump to if overflow is detected
-
-checkOverflow:
-	# NYI
-
-
 # ### compareStrings ###
 # @leaf
 # @param  $a0   start address of first null-terminated string
