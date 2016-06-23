@@ -12,8 +12,8 @@
 
 changequote(<!,!>)
 include(Utility.m4.asm)
-include(Parse.m4.asm)
-include(ProcessInput.m4.asm)
+include(Math.m4.asm)
+include(Eval.m4.asm)
 include(Main.m4.asm)
 
 .data

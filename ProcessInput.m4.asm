@@ -27,18 +27,18 @@ processCommand:
 	# Check for first quit command
 	la $a1, quitCommandShort
 	jal compareStrings
-	bnez $v0, exit
+	bnez $v0, EXIT
 
 	# Check for second quit command
 	la $a1, quitCommandLong
 	jal compareStrings
-	bnez $v0, exit
+	bnez $v0, EXIT
 
 	# Complain on unrecognized command
 	la $a0, unrecognizedCommandMessage
 	jal printString
 	jal printNewline
-	j mainLoop                              # Back to main loop
+	j CONTINUE                              # Back to main loop
 
 
 # ### processOperator ###

@@ -17,6 +17,7 @@ rpnStack: # Storage for up to 64 stack-operations
 # @return $v0   cursor into the same string, at the first character of the first token
 # @return $v1   cursor into the same string, at the last character of the first token
 # @stomps $t0..5
+
 extractTokenBounds:
 	move $t3, $ra
 	move $t4, $a0
@@ -60,7 +61,7 @@ _dispatchToken__prelude:
 	sw $ra, -0($fp)         # caller's $ra,
 	sw $s0, -4($fp)         # caller's $s0,
 	sw $s1, -8($fp)         # caller's $s1.
-	# fall-through
+	# intentional fall-through
 
 _dispatchToken__check:
 	lb $s0, ($a0)                           # Load the first character into $s0

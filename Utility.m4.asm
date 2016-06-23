@@ -240,7 +240,7 @@ _readIntegerOverflow:
 	la $a0, overflowMessage
 	jal printString
 	jal printNewline
-	j mainLoop
+	j CONTINUE
 
 _readIntegerReturn:
 	mul $v0, $v0, $t9
@@ -302,6 +302,8 @@ _compareStringsReturnTrue:
 # @param  $a1   if 0, will consume only whitespace; if 1, will consume only *non-whitespace*
 # @return $a0   (modified in-place) pointer to first non-matching character
 # @stomps $t0..2
+#---
+# NOTE: Several consumers make assumptions about which $t-registers this will use; don't fuck w/ dis
 
 consumeCharacters:
 	lb $t0, ($a0)

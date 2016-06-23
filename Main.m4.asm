@@ -13,6 +13,9 @@ endMessage:
 overflowMessage:
 	.asciiz "Overflow occured when reading an integer; try smaller numbers."
 
+stackStart: # Stack-pointer as of the main-loop, for escape
+	.space 4
+
 lineBuffer: # Used for storing lines read in from user input
 	.space 1024
 
@@ -24,12 +27,16 @@ lineBuffer: # Used for storing lines read in from user input
 # ### main input loop ###
 
 main:
+	sw $sp, stackStart
+
 	la $a0, startMessage
 	jal printString
 	jal printNewline
-	j mainLoop                              # Start main loop
+	# intentional fall-through
 
-mainLoop:
+CONTINUE:
+	lw $sp, stackStart
+
 	# Read in a line of input from the user
 	la $a0, lineBuffer
 	la $a1, 1024
@@ -45,28 +52,17 @@ mainLoop:
 	move $a3, $a0
 	jal printStringDEBUG
 
-	# Check if this is a command
-	lb $t0, ($a0)
-	li $t1, 58                              # ":" character
-	beq $t0, $t1, processCommand
-
 	jal processOperator
 
-	# FIXME
-	# Read in an integer
-	#jal readInteger
-	#li $t0, -1
-	#beq $t0, $v0, errorOverflow            # Message on overflow
-
-	j mainLoop                              # Loop back
+	j CONTINUE                              # Loop back
 
 errorOverflow:
 	la $a0, overflowMessage
 	jal printString
 	jal printNewline
-	j mainLoop                              # Back to main loop
+	j CONTINUE                              # Back to main loop
 
-exit:
+EXIT:
 	la $a0, endMessage
 	jal printString
 	jal printNewline
