@@ -39,6 +39,44 @@ extractTokenBounds:
 	jr $t3
 
 
+# ### evaluateRPN ###
+
+ evaluateRPN:
+_evaluateRPN__prelude:
+	addi $sp, $sp, -8       # Allocate stack space for four 4-byte items:
+	sw $fp,  4($sp)         # caller's $fp,
+	move $fp, $sp
+	sw $ra, -0($fp)         # caller's $ra.
+	# intentional fall-through
+
+_evaluateRPN__loop:
+	# Consume whitespace
+	li $a1, 0
+	jal consumeCharacters
+
+	jal dispatchToken
+
+	lb $t0, ($a0)                           # Peek the first character into $t0
+	beq $t0, 10, _evaluateRPN__verify       # If line-feed, we're done
+	j _evaluateRPN__loop
+
+_evaluateRPN__INCOMPLETE:
+	# NYI: Dump an error message, as well as current stack-contents.
+
+_evaluateRPN__verify:
+	# If the stack hasn't been fully exhausted, it's errors
+	la $t0, rpnStack
+	bne $s7, $t0, _evaluateRPN__INCOMPLETE
+	# intentional fall-through
+
+_evaluateRPN__postlude:
+	lw $ra, -0($fp)
+	lw $fp,  4($fp) # loads the old fp *based on* the current fp
+	addi $sp, $sp, 16
+
+	jr $ra
+
+
 # ### dispatchToken ###
 # @non-leaf
 # @param  $a0   address of the first character (non-whitespace) of a token
@@ -63,9 +101,8 @@ _dispatchToken__prelude:
 	sw $s1, -8($fp)         # caller's $s1.
 	# intentional fall-through
 
-_dispatchToken__check:
-	lb $s0, ($a0)                           # Load the first character into $s0
-	addi $a0, 1                             # Increment the read-cursor
+_dispatchToken__body:
+	lb $s0, ($a0)                           # Peek the first character into $s0
 
 	# ASCII bounds-checking:
 	# <~~~                                  # Out-of-bounds control-characters:     erraneous
@@ -137,6 +174,7 @@ _dispatchToken__OTHER_table:
 
 # NYI: dispatches to separate command-dispatcher
 _dispatchToken__COMMA:
+	addi $a0, 1     # Increment cursor past the operator
 
 # NYI: peek at subsequent character, then dispatch either to unary-dispatcher or to decimal-parser
 _dispatchToken__PLUS:
@@ -145,7 +183,10 @@ _dispatchToken__ZERO:
 
 # NYI: dispatch to math routines
 _dispatchToken__ASTERISK:
+	addi $a0, 1     # Increment cursor past the operator
+
 _dispatchToken__SOLIDUS:
+	addi $a0, 1     # Increment cursor past the operator
 
 # NYI: dispatch to operation-lookup (BIN, HEX, ADD, etc)
 _dispatchToken__WORD:

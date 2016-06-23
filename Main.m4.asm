@@ -52,6 +52,8 @@ CONTINUE:
 	move $a3, $a0
 	jal printStringDEBUG
 
+	# Initialize the RPN stack
+	la $s7, rpnStack
 	jal processOperator
 
 	j CONTINUE                              # Loop back
