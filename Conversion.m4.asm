@@ -1,7 +1,18 @@
+FILE(<!CONVERSION.M4.ASM!>)
+
   .data
+
+lineBuffer:
+  .space 1024
+
+overflowMessage:
+  .asciiz "Overflow!!!\n"
 
 stringifyHexLUT:
   .ascii "0123456789ABCDEF"
+
+newline:
+  .asciiz "\n"
 
 readHexLUT:
       #  0  1  2  3  4  5  6  7  8  9
@@ -70,6 +81,7 @@ _stringifyHexLoop:
 
   srl $t0, $t0, $t9
   addi $t1, -4
+  addiu $a1, 1
 
   j _stringifyHexLoop
 
@@ -187,6 +199,25 @@ _readHexOverflow:
 _readHexExit:
   jr $ra
 
-main:
-  li $v0, 10
+handleOverflow:
+  li $v0, 4
+  la $a0, overflowMessage
   syscall
+  j main
+
+main:
+  li $v0, 5
+  syscall
+
+  la $a1, lineBuffer
+  move $a0, $v0
+  jal stringifyHex
+
+  li $v0, 4
+  la $a0, lineBuffer
+  syscall
+
+  la $a0, newline
+  syscall
+
+  j main
