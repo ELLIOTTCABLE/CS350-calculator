@@ -47,6 +47,7 @@ _evaluateRPN__prelude:
 	sw $fp,  4($sp)         # caller's $fp,
 	move $fp, $sp
 	sw $ra, -0($fp)         # caller's $ra.
+	sw $s0, -4($fp)         # caller's $s0,
 	# intentional fall-through
 
 _evaluateRPN__loop:
@@ -64,12 +65,20 @@ _evaluateRPN__INCOMPLETE:
 	# NYI: Dump an error message, as well as current stack-contents.
 
 _evaluateRPN__verify:
-	# If the stack hasn't been fully exhausted, it's errors
+	# If the stack hasn't been exhausted, it's an error
 	la $t0, rpnStack
-	bne $s7, $t0, _evaluateRPN__INCOMPLETE
+	bne $t0, 4($s7), _evaluateRPN__INCOMPLETE
+
+	move $s0, $a0
+	move $s7, $t0
+	lw $a0, ($s7)                           # Load the final remaining element from the stack
+
+	jal printResult
+	move $a0, $s0
 	# intentional fall-through
 
 _evaluateRPN__postlude:
+	lw $s0, -4($fp)
 	lw $ra, -0($fp)
 	lw $fp,  4($fp) # loads the old fp *based on* the current fp
 	addi $sp, $sp, 16
@@ -178,6 +187,18 @@ _dispatchToken__COMMA:
 
 # NYI: peek at subsequent character, then dispatch either to unary-dispatcher or to decimal-parser
 _dispatchToken__PLUS:
+	addi $t0, $a0, 1                        # Copy-and-increment cursor past the operator
+	lb $t0, ($t0)                           # Peek the second character into $t0
+
+	seq $t1, $t0, 32
+	seq $t2, $t0, 9
+	or $t0, $t1, $t2
+	beqz $t0, _dispatchToken__DIGIT         # If the next character is *not* a space, number!
+
+	addi $a0, 1                             # *Actually* increment cursor past the operator
+	la $a1, performAdd
+	j _dispatchToken__dispatchBinary
+
 _dispatchToken__HYPHEN:
 _dispatchToken__ZERO:
 
@@ -191,8 +212,39 @@ _dispatchToken__SOLIDUS:
 # NYI: dispatch to operation-lookup (BIN, HEX, ADD, etc)
 _dispatchToken__WORD:
 
+_dispatchToken__dispatchBinary:
+	# Expects a target operation's address in $a1
+	move $t2, $a1
+
+	li $t0, 2
+	jal _dispatchToken__checkStackSize
+
+	lw $a0, ($s7)                                   # Load two stack-elements into arguments,
+	lw $a1, -4($s7)
+	addi $s7, -4                                    # shrink RPN stack by one slot,
+
+	jalr $t2
+
+	sw $v0, ($s7)                                   # and replace the second-to-top item with
+	                                                # the return-value of the operation
+	j _dispatchToken__postlude
+
 # NYI: dispatch to integer parser
 _dispatchToken__DIGIT:
+
+
+# Compares the stack-size to a minimum of $t0
+_dispatchToken__checkStackSize:
+	mul $t0, $t0, 4
+
+	la $t1, rpnStack
+	blt $t1, $s7, WTF
+
+	sub $t1, $s7, $t0
+	blt $t1, $t0, ___tooFewOperandsError
+
+	jr $ra
+
 
 # NYI: error message that this is RPN, i.e. try re-ordering
 _dispatchToken__BRACKETS:
