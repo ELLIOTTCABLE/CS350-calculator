@@ -1,6 +1,11 @@
 FILE(<!EVAL.M4.ASM!>)
 
+# DATA
+# ----
 .data
+fewOperandsMessage:
+	.asciiz "Operation dispatched with two few operands on stack."
+
 rpnStack: # Storage for up to 64 stack-operations
 	.space 256 # 4 * 64
 
@@ -67,7 +72,8 @@ _evaluateRPN__INCOMPLETE:
 _evaluateRPN__verify:
 	# If the stack hasn't been exhausted, it's an error
 	la $t0, rpnStack
-	bne $t0, 4($s7), _evaluateRPN__INCOMPLETE
+	addi $t0, 4
+	bne $t0, $s7, _evaluateRPN__INCOMPLETE
 
 	move $s0, $a0
 	move $s7, $t0
@@ -241,7 +247,7 @@ _dispatchToken__checkStackSize:
 	blt $t1, $s7, WTF
 
 	sub $t1, $s7, $t0
-	blt $t1, $t0, ___tooFewOperandsError
+	blt $t1, $t0, _dispatchToken__FEWOPERANDS
 
 	jr $ra
 
@@ -254,6 +260,12 @@ _dispatchToken__UNSUPPORTED:
 
 # NYI: error message that that this is an erranous input byte (control character, or higher-plane)
 _dispatchToken__CONTROL:
+
+_dispatchToken__FEWOPERANDS:
+	la $a0, fewOperandsMessage
+	jal printString
+	jal printNewline
+	j CONTINUE
 
 _dispatchToken__postlude:
 	lw $s1, -8($fp)
