@@ -22,10 +22,33 @@ include(Main.m4.asm)
 DEBUGenable:
 	.byte 0
 
+# FIXME: Relocate these
 quitCommandShort:
 	.asciiz "q\n"
 
 quitCommandLong:
 	.asciiz "quit\n"
+
+endMessage:
+	.asciiz "Unknown error occured! D:"
+
+endMessage:
+	.asciiz "Goodbye!"
+
+.text
+
+# Global last-ditch error handler.
+WTF:
+	la $a0, wtfMessage
+	jal printString
+	jal printNewline
+	# intentional fall-through
+
+EXIT:
+	la $a0, endMessage
+	jal printString
+	jal printNewline
+	li $v0, 10
+	syscall
 
 dnl vim: set shiftwidth=8 tabstop=8 noexpandtab softtabstop& list listchars=tab\: ·:

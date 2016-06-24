@@ -148,6 +148,7 @@ getLine: # @leaf
 # @leaf
 # @param  $a0   start of string to parse as integer
 # @return $v0   parsed integer, 0 if failed to parse
+# @stomps $t0..9
 #---
 # FIXME: Modify $a0 in-place, like the rest of the procedures.
 
