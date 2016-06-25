@@ -24,9 +24,6 @@ spaceChar:
 newlineChar:
 	.asciiz "\n"
 
-readIntegerBuffer: # Used for parsing integers
-	.space 10
-
 
 # PROCEDURES
 # ----------
@@ -215,109 +212,6 @@ _dumpRPNStack__postlude:
 
 	jr $ra
 
-
-# ### readInteger ###
-# @leaf
-# @param  $a0   start of string to parse as integer
-# @return $v0   parsed integer, 0 if failed to parse
-# @stomps $t0..9
-#---
-# FIXME: Modify $a0 in-place, like the rest of the procedures.
-
-readInteger:
-	la $t0, readIntegerBuffer               # Pointer to current read location
-	addiu $t1, $t0, 10                      # Pointer to one past end of buffer (end of read)
-
-	# Next-level hacking for negative numbers (not really)
-	lb $t2, ($a0)
-	li $t3, 1
-	li $t4, -2
-	li $t5, 45 # "-" character
-	seq $t5, $t2, $t5
-	add $a0, $a0, $t5
-	mul $t4, $t5, $t4
-	add $t9, $t3, $t4
-
-	j _readIntegerDiscardLoop               # Jump into loop
-
-_readIntegerDiscardLoop:
-	lb $t2, ($a0)                           # Load next character from string
-
-	# Check if not "0"
-	li $t3, 48
-	bne $t2, $t3, _readIntegerReadLoop
-
-	# Increment and loop back
-	addiu $a0, 1
-	j _readIntegerDiscardLoop
-
-_readIntegerReadLoop:
-	lb $t2, ($a0)                           # Load next character from string
-	addi $t2, -48                           # Offset ASCII value to get numerical value
-
-	# Check if it's within the range of ASCII digits
-	# If not, branch to the summation step
-	li $t3, -1
-	sgt $t3, $t2, $t3
-	li $t4, 10
-	slt $t4, $t2, $t4
-	and $t3, $t3, $t4
-	beqz $t3, _readIntegerSum
-
-	beq $t0, $t1, _readIntegerOverflow      # Jump to overflow if we're past 10 digits
-
-	sb $t2, ($t0)                           # Store numerical value in buffer
-	addiu $t0, 1                            # Increment buffer pointer
-	addiu $a0, 1                            # Increment string pointer
-
-	j _readIntegerReadLoop                  # Loop back
-
-_readIntegerSum:
-	li $v0, 0                               # Initialize accumulation register
-
-	# Pointer to one before start of buffer (end of read)
-	la $t1, readIntegerBuffer
-	addi $t1, -1
-
-	# Step the write head backwards, since we stop one past the buffer
-	addi $t0, -1
-
-	# Initialize registers for multiplication
-	li $t2, 1
-	li $t3, 10
-
-	j _readIntegerSumLoop                   # Jump to summation loop
-
-_readIntegerSumLoop:
-	beq $t0, $t1, _readIntegerReturn        # Branch to return when done reading
-
-	# Load byte and multiply by current place value
-	lb $t4, ($t0)
-	multu $t4, $t2
-	mflo $t5
-	mfhi $t6
-	slt $t7, $t5, $zero
-	sne $t8, $t6, $zero
-	or $t7, $t7, $t8
-	bnez $t7, _readIntegerOverflow         # Overflow check
-
-	# Accumulate into $v0
-	addu $v0, $v0, $t5
-	bltz $v0, _readIntegerOverflow         # Overflow check
-
-	mul $t2, $t2, $t3                      # Increase place value
-	addi $t0, -1                           # Decrement read pointer
-	j _readIntegerSumLoop                  # Loop back
-
-_readIntegerOverflow:
-	la $a0, overflowMessage
-	jal printString
-	jal printNewline
-	j CONTINUE
-
-_readIntegerReturn:
-	mul $v0, $v0, $t9
-	jr $ra
 
 # ### compareStrings ###
 # @leaf
