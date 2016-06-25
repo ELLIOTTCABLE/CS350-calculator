@@ -191,7 +191,7 @@ _dispatchToken__OTHER:
 	# append the (offset) ASCII value of the character to the address, before jumping to the
 	# computed result.
 	la $t1, _dispatchToken__OTHER_table
-	addi $s0, -42                           # index from the ASCII byte into [*, +, _, -, _, /]
+	addi $s0, -40                           # index from the ASCII byte into [(, ), *, +, ...]
 	mul $s0, $s0, 4
 	add $s0, $s0, $t1                       # add that index to the address of our jump-table,
 	jr $s0                                  # … jump into the computed address in our jump-table
