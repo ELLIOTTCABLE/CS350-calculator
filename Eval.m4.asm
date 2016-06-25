@@ -4,7 +4,7 @@ FILE(<!EVAL.M4.ASM!>)
 # ----
 .data
 fewOperandsMessage:
-	.asciiz "Operation dispatched with two few operands on stack."
+	.asciiz "Operation dispatched with too few operands on stack."
 
 rpnStack: # Storage for up to 64 stack-operations
 	.space 256 # 4 * 64
