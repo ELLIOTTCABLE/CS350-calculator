@@ -44,7 +44,7 @@ _performAddOverflow:
 	move $a0, $t0
 	jal printInteger
 
-	move $a0, overflowMessageConnector
+	la $a0, overflowMessageConnector
 	jal printString
 
 	move $a0, $t1
@@ -78,7 +78,7 @@ _performSubOverflow:
 	move $a0, $t0
 	jal printInteger
 
-	move $a0, overflowMessageConnector
+	la $a0, overflowMessageConnector
 	jal printString
 
 	move $a0, $t1
@@ -118,7 +118,7 @@ _performMulOverflow:
 	move $a0, $t0
 	jal printInteger
 
-	move $a0, overflowMessageConnector
+	la $a0, overflowMessageConnector
 	jal printString
 
 	move $a0, $t1
