@@ -52,7 +52,7 @@ CONTINUE:
 
 	# Initialize the RPN stack
 	la $s7, rpnStack
-	jal processOperator
+	jal evaluateRPN
 
 	j CONTINUE                              # Loop back
 

@@ -12,6 +12,7 @@
 
 changequote(<!,!>)
 include(Utility.m4.asm)
+include(Conversion.m4.asm)
 include(Math.m4.asm)
 include(Eval.m4.asm)
 include(Main.m4.asm)
@@ -29,7 +30,7 @@ quitCommandShort:
 quitCommandLong:
 	.asciiz "quit\n"
 
-endMessage:
+wtfMessage:
 	.asciiz "Unknown error occured! D:"
 
 endMessage:
