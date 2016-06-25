@@ -133,6 +133,15 @@ performDiv:
 
 	jr $ra
 
+performDecimalPrint:
+	move $v0, $a0
+	move $t8, $ra
+
+	jal printInteger
+	jal printNewline
+
+	jr $t8
+
 performBinaryPrint:
 	move $v0, $a0
 	move $t8, $ra
