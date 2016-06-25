@@ -4,10 +4,20 @@ FILE(<!EVAL.M4.ASM!>)
 # ----
 .data
 fewOperandsMessage:
-	.asciiz "Operation dispatched with too few operands on stack."
+	.asciiz "Operation dispatched with too few operands on stack:"
 
+.align 2
 rpnStack: # Storage for up to 64 stack-operations
 	.space 256 # 4 * 64
+
+evaluateRPNLoopDescription:
+	.asciiz "(RPN: looping)"
+dispatchTokenDescription:
+	.asciiz "(RPN: dispatching)"
+dispatchBinaryDescription:
+	.asciiz "(RPN: dispatching binary)"
+pushIntegerDescription:
+	.asciiz "(RPN: pushing)"
 
 # PROCEDURES
 # ----------
@@ -48,14 +58,19 @@ extractTokenBounds:
 
  evaluateRPN:
 _evaluateRPN__prelude:
-	addi $sp, $sp, -8       # Allocate stack space for four 4-byte items:
-	sw $fp,  4($sp)         # caller's $fp,
+	addi $sp, $sp, -12      # Allocate stack space for THREE 4-byte items:
+	sw $fp,  8($sp)         # caller's $fp,
 	move $fp, $sp
-	sw $ra, -0($fp)         # caller's $ra.
-	sw $s0, -4($fp)         # caller's $s0,
+	sw $ra, -0($fp)         # caller's $ra,
+	sw $s0, -4($fp)         # caller's $s0.
 	# intentional fall-through
 
 _evaluateRPN__loop:
+	la $a3, evaluateRPNLoopDescription
+	jal printStringDEBUG
+	move $a3, $a0
+	jal printStringDEBUG
+
 	# Consume whitespace
 	li $a1, 0
 	jal consumeCharacters
@@ -87,7 +102,7 @@ _evaluateRPN__postlude:
 	lw $s0, -4($fp)
 	lw $ra, -0($fp)
 	lw $fp,  4($fp) # loads the old fp *based on* the current fp
-	addi $sp, $sp, 16
+	addi $sp, $sp, 12
 
 	jr $ra
 
@@ -118,6 +133,11 @@ _dispatchToken__prelude:
 
 _dispatchToken__body:
 	lb $s0, ($a0)                           # Peek the first character into $s0
+
+	la $a3, dispatchTokenDescription
+	jal printStringDEBUG
+	move $a3, $s0
+	jal printIntegerDEBUG
 
 	# ASCII bounds-checking:
 	# <~~~                                  # Out-of-bounds control-characters:     erraneous
@@ -203,7 +223,7 @@ _dispatchToken__PLUS:
 
 	addi $a0, 1                             # *Actually* increment cursor past the operator
 	la $a1, performAdd
-	j _dispatchToken__dispatchBinary
+	j _dispatchToken__dispatchBinaryOp
 
 _dispatchToken__HYPHEN:
 _dispatchToken__ZERO:
@@ -218,28 +238,43 @@ _dispatchToken__SOLIDUS:
 # NYI: dispatch to operation-lookup (BIN, HEX, ADD, etc)
 _dispatchToken__WORD:
 
-_dispatchToken__dispatchBinary:
+_dispatchToken__dispatchBinaryOp:
+	la $a3, dispatchBinaryDescription
+	jal printStringDEBUG
+
 	# Expects a target operation's address in $a1
 	move $t2, $a1
 
 	li $t0, 2
 	jal _dispatchToken__checkStackSize
 
-	lw $a0, ($s7)                                   # Load two stack-elements into arguments,
-	lw $a1, -4($s7)
-	addi $s7, -4                                    # shrink RPN stack by one slot,
+	lw $a1, ($s7)                                   # Load two stack-elements into arguments,
+	lw $a2, -4($s7)
 
 	jalr $t2
 
+	addi $s7, -4                                    # shrink RPN stack by one slot,
 	sw $v0, ($s7)                                   # and replace the second-to-top item with
 	                                                # the return-value of the operation
 	j _dispatchToken__postlude
 
 # NYI: dispatch to integer parser
 _dispatchToken__DIGIT:
+	jal readInteger
+	beqz $v0, WTF
 
+	la $a3, pushIntegerDescription
+	jal printStringDEBUG
+	move $a3, $v0
+	jal printIntegerDEBUG
+
+	sw $v0, ($s7)                                   # push the integer onto the stack
+	addi $s7, 4
+
+	j _dispatchToken__postlude
 
 # Compares the stack-size to a minimum of $t0
+# Yes, I'm using $t0 as an argument register. go die. ~ec
 _dispatchToken__checkStackSize:
 	mul $t0, $t0, 4
 
@@ -247,10 +282,9 @@ _dispatchToken__checkStackSize:
 	blt $t1, $s7, WTF
 
 	sub $t1, $s7, $t0
-	blt $t1, $t0, _dispatchToken__FEWOPERANDS
+	blt $t1, $t0, _dispatchToken__tooFewOperands
 
 	jr $ra
-
 
 # NYI: error message that this is RPN, i.e. try re-ordering
 _dispatchToken__BRACKETS:
@@ -261,11 +295,15 @@ _dispatchToken__UNSUPPORTED:
 # NYI: error message that that this is an erranous input byte (control character, or higher-plane)
 _dispatchToken__CONTROL:
 
-_dispatchToken__FEWOPERANDS:
+_dispatchToken__tooFewOperands:
 	la $a0, fewOperandsMessage
 	jal printString
 	jal printNewline
-	j CONTINUE
+	# intentional fall-through
+
+_dispatchToken__dumpStack:
+	jal dumpRPNStack
+	# intentional fall-through
 
 _dispatchToken__postlude:
 	lw $s1, -8($fp)

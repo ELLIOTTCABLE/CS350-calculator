@@ -10,6 +10,7 @@ startMessage:
 overflowMessage:
 	.asciiz "Overflow occured when reading an integer; try smaller numbers."
 
+.align 2
 stackStart: # Stack-pointer as of the main-loop, for escape
 	.space 4
 
