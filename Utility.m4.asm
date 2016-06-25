@@ -176,36 +176,44 @@ getLine: # @leaf
 
 
 # ### dumpRPNStack ###
-# @leaf
+# @non-leaf
 # @param  $s7   pointer to the top (next, empty slot) of the RPN stack
-# @stomps $t0..3
+# @stomps $t0..3, $a0
 
-dumpRPNStack:
-	move $t0, $ra
-	move $t1, $a0
-	move $t2, $s7
+ dumpRPNStack:
+_dumpRPNStack__prelude:
+	addi $sp, $sp, -12      # Allocate stack space for THREE 4-byte items:
+	sw $fp,  8($sp)         # caller's $fp,
+	move $fp, $sp
+	sw $ra, -0($fp)         # caller's $ra,
+	sw $s0, -4($fp)         # caller's $s0.
+
+	move $s0, $s7
 
 	la $a0, stackPrefix
 	jal printString
 	# intentional fall-through
 
 _dumpRPNStack__loop:
-	la $t3, rpnStack
-	beq $t2, $t3, _dumpRPNStack__finished
+	la $t0, rpnStack
+	beq $s0, $t0, _dumpRPNStack__postlude
+
+	addi $s0, -4                                    # shrink RPN stack by one slot,
+	lw $a0, ($s0)                                   # grab previously-top item off RPN stack,
+	jal printInteger                                # print it
 
 	jal printSpace
-
-	lw $a0, ($t2)
-	jal printInteger                                # Print top item off RPN stack,
-
-	addi $t2, -4                                    # shrink RPN stack by one slot,
 	j _dumpRPNStack__loop
 
-_dumpRPNStack__finished
+_dumpRPNStack__postlude:
 	jal printNewline
 
-	move $a0, $t1
-	jr $t0
+	lw $s0, -4($fp)
+	lw $ra, -0($fp)
+	lw $fp,  4($fp) # loads the old fp *based on* the current fp
+	addi $sp, $sp, 12
+
+	jr $ra
 
 
 # ### readInteger ###
