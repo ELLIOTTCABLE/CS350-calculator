@@ -14,7 +14,14 @@ resultPrefix:
 debugPrefix:
 	.asciiz "!! "
 
-newline:
+stackPrefix:
+	.asciiz ")) "
+
+dotChar:
+	.asciiz "."
+spaceChar:
+	.asciiz " "
+newlineChar:
 	.asciiz "\n"
 
 readIntegerBuffer: # Used for parsing integers
@@ -45,12 +52,36 @@ printString: # @leaf
 	move $v0, $t0
 	jr $ra
 
+printDot: # @leaf
+	move $t0, $a0
+	move $t1, $v0
+
+	li $v0, 4
+	la $a0, dotChar
+	syscall
+
+	move $v0, $t1
+	move $a0, $t0
+	jr $ra
+
+printSpace: # @leaf
+	move $t0, $a0
+	move $t1, $v0
+
+	li $v0, 4
+	la $a0, spaceChar
+	syscall
+
+	move $v0, $t1
+	move $a0, $t0
+	jr $ra
+
 printNewline: # @leaf
 	move $t0, $a0
 	move $t1, $v0
 
 	li $v0, 4
-	la $a0, newline
+	la $a0, newlineChar
 	syscall
 
 	move $v0, $t1
@@ -70,7 +101,7 @@ printResult: # @leaf
 	syscall
 
 	li $v0, 4
-	la $a0, newline
+	la $a0, newlineChar
 	syscall
 
 	move $v0, $t1
@@ -91,7 +122,7 @@ printStringDEBUG: # @leaf
 	move $a0, $a3
 	syscall
 
-	la $a0, newline
+	la $a0, newlineChar
 	syscall
 
 	move $v0, $t1
@@ -116,7 +147,7 @@ printIntegerDEBUG: # @leaf
 	syscall
 
   li $v0, 4
-	la $a0, newline
+	la $a0, newlineChar
 	syscall
 
 	move $v0, $t1
@@ -142,6 +173,39 @@ getLine: # @leaf
 
 	move $v0, $t1
 	jr $ra
+
+
+# ### dumpRPNStack ###
+# @leaf
+# @param  $s7   pointer to the top (next, empty slot) of the RPN stack
+# @stomps $t0..3
+
+dumpRPNStack:
+	move $t0, $ra
+	move $t1, $a0
+	move $t2, $s7
+
+	la $a0, stackPrefix
+	jal printString
+	# intentional fall-through
+
+_dumpRPNStack__loop:
+	la $t3, rpnStack
+	beq $t2, $t3, _dumpRPNStack__finished
+
+	jal printSpace
+
+	lw $a0, ($t2)
+	jal printInteger                                # Print top item off RPN stack,
+
+	addi $t2, -4                                    # shrink RPN stack by one slot,
+	j _dumpRPNStack__loop
+
+_dumpRPNStack__finished
+	jal printNewline
+
+	move $a0, $t1
+	jr $t0
 
 
 # ### readInteger ###
