@@ -51,12 +51,28 @@ performDiv:
 
 	jr $ra
 
-
 performBinaryPrint:
 	move $v0, $a0
+	move $t8, $ra
 	
 	la $a1, stringificationBuffer
-	move $t8, $ra
 	jal stringifyBinary
 
-	
+	la $a0, stringificationBuffer
+	jal printString
+	jal printNewline
+
+	jr $t8
+
+performHexPrint:
+	move $v0, $a0
+	move $t8, $ra
+
+	la $a1, stringificationBuffer
+	jal stringifyHex
+
+	la $a0, stringificationBuffer
+	jal printString
+	jal printNewline
+
+	jr $t8
