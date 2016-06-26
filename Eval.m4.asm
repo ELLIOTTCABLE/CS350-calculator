@@ -4,6 +4,9 @@ FILE(<!EVAL.M4.ASM!>)
 # ----
 .data
 
+debugCommandFull:
+	.asciiz "debug"
+
 quitCommandShort:
 	.asciiz "q"
 
@@ -54,6 +57,10 @@ tooFewOperandsMessage:
 
 unsupportedOperationMessage:
 	.asciiz "FATAL: Unsupported operation: "
+
+unsupportedCommandMessage:
+	.asciiz "FATAL: Unsupported command: "
+
 
 unsupportedInputMessage:
 	.asciiz "FATAL: Your input included unsupported characters!"
@@ -259,7 +266,10 @@ _dispatchToken__COMMA:
 	li $a1, 0
 	jal consumeCharacters
 
-	# Check for first quit command
+	la $a1, debugCommandFull
+	jal compareTokens
+	bnez $v0, toggleDebug
+
 	la $a1, quitCommandShort
 	jal compareTokens
 	bnez $v0, EXIT
@@ -287,6 +297,19 @@ _dispatchToken__COMMA:
 	la $a1, commandsCommandFull
 	jal compareTokens
 	bnez, $v0, printCommands
+
+_dispatchToken__unsupportedCommand:
+	jal extractTokenBounds
+#	move $v0, $v0
+#	move $v1, $v1
+
+	la $a0, unsupportedCommandMessage
+	jal printString
+
+	move $a0, $v0
+	addi $a1, $v1, 1
+	jal printStringUpTo
+	jal printNewline
 
 	j CONTINUE
 
