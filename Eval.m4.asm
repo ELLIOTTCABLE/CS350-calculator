@@ -371,16 +371,17 @@ _dispatchToken__dispatchUnaryOp:
 	la $a3, dispatchUnaryDescription
 	jal printStringDEBUG
 
-	# Expects a target operation's address in $a1
-	move $t2, $a1
+	move $s1, $a0
+	move $t3, $a1                           # Expects a target operation's address in $a1
 
 	li $a1, 1
 	jal _dispatchToken__checkStackSize
 
 	lw $a1, -4($s7)                                 # Load two stack-elements into arguments,
-	jalr $t2
+	jalr $t3
 	sw $v0, -4($s7)                                 # replace the top item with the return-value
 
+	move $a0, $s1
 	jal extractTokenBounds
 	addi $a0, $v1, 1
 

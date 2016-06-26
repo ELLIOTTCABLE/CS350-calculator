@@ -119,7 +119,7 @@ performDecimalPrint:
 
 performBinaryPrint:
 	move $t8, $ra
-	move $t2, $a0
+	move $t9, $a0
 	move $v0, $a1
 
 	la $a0, binPrefix
@@ -133,12 +133,12 @@ performBinaryPrint:
 	jal printString
 	jal printNewline
 
-	move $a0, $t2
+	move $a0, $t9
 	jr $t8
 
 performHexPrint:
 	move $t8, $ra
-	move $t2, $a0
+	move $t9, $a0
 	move $v0, $a1
 
 	la $a0, hexPrefix
@@ -152,7 +152,7 @@ performHexPrint:
 	jal printString
 	jal printNewline
 
-	move $a0, $t2
+	move $a0, $t9
 	jr $t8
 
 dnl vim: set shiftwidth=8 tabstop=8 noexpandtab softtabstop& list listchars=tab\: ·:
