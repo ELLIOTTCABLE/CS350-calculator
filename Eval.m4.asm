@@ -19,11 +19,20 @@ helpCommandFull:
 helpCommandWTF:
 	.asciiz "wtf\n"
 
+bracketsMessage:
+	.asciiz "This is a ‘Reverse Polish Notation’, or RPN, calculator; brackets are unsupported: "
+
 tooFewOperandsMessage:
 	.asciiz "Operation dispatched with too few operands on stack:"
 
 tooFewOperationsMessage:
 	.asciiz "Input exhausted without exhausting RPN stack; too many operands:"
+
+unsupportedOperationMessage:
+	.asciiz "Unsupported operation: "
+
+unsupportedInputMessage:
+	.asciiz "FATAL: Your input included unsupported characters!"
 
 .align 2
 rpnStack: # Storage for up to 64 stack-operations
@@ -178,7 +187,7 @@ _dispatchToken__body:
 	slt $t5, $s0, 91
 	slt $t6, $s0, 97
 	slt $t7, $s0, 123
-	slt $t8, $s0, 123
+	slt $t8, $s0, 127
 
 	bnez $t0, _dispatchToken__CONTROL
 	bnez $t1, _dispatchToken__UNSUPPORTED
@@ -212,7 +221,6 @@ _dispatchToken__OTHER_table:
 	j _dispatchToken__SOLIDUS       # /
 	j _dispatchToken__ZERO          # 0
 
-# NYI: dispatches to separate command-dispatcher
 _dispatchToken__COMMA:
 	addi $a0, 1     # Increment cursor past the operator
 
@@ -264,7 +272,6 @@ _dispatchToken__dispatchPossibleNumber:
 	addi $a0, 1                             # *Actually* increment cursor past the operator
 	j _dispatchToken__dispatchBinaryOp
 
-# NYI: dispatch to math routines
 _dispatchToken__ASTERISK:
 	addi $a0, 1                             # Increment cursor past the operator
 	la $a1, performMul
@@ -371,14 +378,37 @@ _dispatchToken__pushBinary:
 	addi $s7, 4
 	j _dispatchToken__postlude
 
-# NYI: error message that this is RPN, i.e. try re-ordering
 _dispatchToken__BRACKETS:
+	move $t1, $a0
+	la $a0, bracketsMessage
+	jal printString
 
-# NYI: error message that this token represents unsupported behaviour
+	move $a0, $t1
+	jal printString
+	jal printNewline
+
+	j CONTINUE
+
 _dispatchToken__UNSUPPORTED:
+	move $t1, $a0
 
-# NYI: error message that that this is an erranous input byte (control character, or higher-plane)
+	la $a0, unsupportedOperationMessage
+	jal printString
+
+	move $a0, $t1
+	addi $a1, $a0, 1
+	jal printStringUpTo
+	jal printNewline
+
+	jal dumpRPNStack
+	j CONTINUE
+
 _dispatchToken__CONTROL:
+	la $a0, unsupportedInputMessage
+	jal printString
+	jal printNewline
+
+	j CONTINUE
 
 _dispatchToken__tooFewOperands:
 	la $a0, tooFewOperandsMessage

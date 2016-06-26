@@ -58,6 +58,25 @@ printString: # @leaf
 	move $v0, $t0
 	jr $ra
 
+# ### printStringUpTo ###
+# @leaf
+# @param  $a0   start-address of a string to print
+# @param  $a1   address at which to *stop* printing
+# @stomps $t0..$t1
+printStringUpTo: # @leaf
+	move $t0, $v0
+
+	lb $t1, ($a1)
+	sb $0,  ($a1)
+
+	li $v0, 4
+	syscall
+
+	sb $t1, ($a1)
+
+	move $v0, $t0
+	jr $ra
+
 printDot: # @leaf
 	move $t0, $a0
 	move $t1, $v0
