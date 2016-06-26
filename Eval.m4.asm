@@ -266,23 +266,23 @@ _dispatchToken__COMMA:
 
 	# Check for first quit command
 	la $a1, quitCommandShort
-	jal compareStrings
+	jal compareTokens
 	bnez $v0, EXIT
 
 	la $a1, quitCommandFull
-	jal compareStrings
+	jal compareTokens
 	bnez $v0, EXIT
 
 	la $a1, helpCommandShort
-	jal compareStrings
+	jal compareTokens
 	bnez, $v0, printUsageMessage
 
 	la $a1, helpCommandFull
-	jal compareStrings
+	jal compareTokens
 	bnez, $v0, printUsageMessage
 
 	la $a1, helpCommandWTF
-	jal compareStrings
+	jal compareTokens
 	bnez, $v0, printUsageMessage
 
 	j CONTINUE
@@ -321,29 +321,29 @@ _dispatchToken__SOLIDUS:
 
 _dispatchToken__WORD:
 	la $a1, hexOperatorShort
-	jal compareStrings
+	jal compareTokens
 
 	la $a1, performHexPrint
 	bnez $v0, _dispatchToken__dispatchUnaryOp
 
 	la $a1, binOperatorShort
-	jal compareStrings
+	jal compareTokens
 	move $s1, $v0
 	la $a1, binOperatorFull
-	jal compareStrings
+	jal compareTokens
 	or $s1, $s1, $v0
 
 	la $a1, performBinaryPrint
 	bnez $s1, _dispatchToken__dispatchUnaryOp
 
 	la $a1, decOperatorShort
-	jal compareStrings
+	jal compareTokens
 	move $s1, $v0
 	la $a1, decOperatorFull
-	jal compareStrings
+	jal compareTokens
 	or $s1, $s1, $v0
 	la $a1, peekOperatorFull
-	jal compareStrings
+	jal compareTokens
 	or $s1, $s1, $v0
 
 	la $a1, performDecimalPrint
@@ -378,10 +378,12 @@ _dispatchToken__dispatchUnaryOp:
 	jal _dispatchToken__checkStackSize
 
 	lw $a1, -4($s7)                                 # Load two stack-elements into arguments,
-
 	jalr $t2
-
 	sw $v0, -4($s7)                                 # replace the top item with the return-value
+
+	jal extractTokenBounds
+	addi $a0, $v1, 1
+
 	j _dispatchToken__postlude
 
 _dispatchToken__dispatchBinaryOp:

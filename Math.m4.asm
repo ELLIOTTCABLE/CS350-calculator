@@ -129,7 +129,7 @@ performBinaryPrint:
 	la $a1, stringificationBuffer
 	jal stringifyBinary
 
-	move $a0, $a1
+	la $a0, stringificationBuffer
 	jal printString
 	jal printNewline
 
@@ -148,7 +148,7 @@ performHexPrint:
 	la $a1, stringificationBuffer
 	jal stringifyHex
 
-	move $a0, $a1
+	la $a0, stringificationBuffer
 	jal printString
 	jal printNewline
 

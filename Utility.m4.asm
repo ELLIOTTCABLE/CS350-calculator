@@ -371,7 +371,7 @@ compareTokens:
 	# Move arguments into temporaries
 	move $t0, $a0
 	move $t1, $a1
-	j _compareStringsLoop                   # Jump into loop
+	j _compareTokensLoop                   # Jump into loop
 
 _compareTokensLoop:
 	# Load characters from both strings
@@ -396,20 +396,20 @@ _compareTokensLoop:
 
 	and $t4, $t4, $t5
 
-	bnez $t4, _compareStringsReturnTrue
+	bnez $t4, _compareTokensReturnTrue
 
 	seq $t4, $t2, $t3
 	addi $t3, -32
 	seq $t5, $t2, $t3
 	or $t4, $t4, $t5
 
-	beqz $t4, _compareStringsReturnFalse
+	beqz $t4, _compareTokensReturnFalse
 
 	# Increment pointers
 	addiu $t0, 1
 	addiu $t1, 1
 
-	j _compareStringsLoop                   # Loop back
+	j _compareTokensLoop                   # Loop back
 
 _compareTokensReturnFalse:
 	li $v0, 0
