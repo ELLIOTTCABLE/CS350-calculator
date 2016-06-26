@@ -31,11 +31,10 @@ RIBBN runs a Read-Eval-Print-Loop which continually evaluates new RPN expression
 ## Numeric Representation and Acceptable Numbers ##
 RIBBN internally uses two's complement signed 32-bit integers for all calculations. Thus, representable numbers are in the range -2,147,483,648 to 2,147,483,647. If overflow occurs during a calculation, it will be aborted and an error message with the problematic operation will be displayed.
 
-RIBBN supports multiple textual numeric representations. Decimal integers may contain commas and be prefixed with a minus (`-`) sign. Binary numbers are prefaced with `0b` and hexadecimal numbers are prefaced with `0x`. Binary and hexadecimal numbers translate directly to bits in a two's complement binary string, and therefore have no regular "negativity" support (they cannot be prefaced with `-` signs).
+RIBBN supports multiple textual numeric representations. Decimal integers may be prefixed with a minus (`-`) sign. Binary numbers are prefaced with `0b` and hexadecimal numbers are prefaced with `0x`. Binary and hexadecimal numbers translate directly to bits in a 32-bit binary string, and therefore have no regular "negativity" support (they cannot be prefaced with `-` signs). Instead, negative numbers are entered in binary or hexadecimal by directly specifying all 32 bits of the two's complement number.
 
 As examples, the following numbers are all valid input to RIBBN:
 
-	123,456,789
 	123456789
 	-487
 	0xfce
@@ -73,6 +72,9 @@ Prints `<a>` as a hexadecimal string and passes it through the RPN expression.
 Prints `<a>` as a decimal string and passes it through the RPN expression.
 
 ## Command Listing ##
+
+### `,commands` ###
+Lists all commands.
 
 ### `,q` and `,quit` ###
 Exits RIBBN.
