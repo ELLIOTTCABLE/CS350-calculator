@@ -36,6 +36,35 @@ stackOUTDescription:
 usageMessage:
 	.asciiz "USAGE: [ <val> <val> ... <op> ... ] - Enter operands followed by an operation;\n       for instance: `123 0b01101 +' or `45 BIN'."
 
+helpMessage:
+	.asciiz "dnl
+RIBBN is a RPN (`Reverse Polish Notation') calculator written by hand [ *_ *] in
+MIPS assembly. You provide lines of RPN input, which are evaluated by the
+calculator engine; the operations should eventually reduce to a single value.
+For example, given the following, equivalent to `(4 + 1) * 4’ in infix,
+
+   =) 4 1 +  2 *
+   )) 20
+
+Any operand-value to an operation may be replaced by another RPN expression. In
+addition, literal values may be entered in either decimal `123’, hexadecimal
+`0x7b', or binary `0b01111011'. (Note: the `0b' and `0x' prefixes are required!)"
+
+commandsMessage:
+	.asciiz "dnl
+RIBBN supports the following commands and atomic operations:
+
+Operations:
+   x y +    x y -    (binary)
+   x y *    x y /
+
+   x BIN    x HEX    (unary)
+   x DEC or x PEEK
+
+Commands:
+   ,help    ,quit
+   ,commands"
+
 
 # PROCEDURES
 # ----------
@@ -131,6 +160,40 @@ printUsage: # @leaf
 	move $v0, $t1
 	move $a0, $t0
 	jr $ra
+
+printHelp: # @leaf
+	move $t0, $a0
+	move $t1, $v0
+
+	li $v0, 4
+	la $a0, helpMessage
+	syscall
+
+	li $v0, 4
+	la $a0, newlineChar
+	syscall
+
+	move $v0, $t1
+	move $a0, $t0
+
+	j CONTINUE
+
+printCommands: # @leaf
+	move $t0, $a0
+	move $t1, $v0
+
+	li $v0, 4
+	la $a0, commandsMessage
+	syscall
+
+	li $v0, 4
+	la $a0, newlineChar
+	syscall
+
+	move $v0, $t1
+	move $a0, $t0
+
+	j CONTINUE
 
 printStringDEBUG: # @leaf
 	lb $t0, DEBUGenable

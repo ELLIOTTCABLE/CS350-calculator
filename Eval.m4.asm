@@ -5,19 +5,25 @@ FILE(<!EVAL.M4.ASM!>)
 .data
 
 quitCommandShort:
-	.asciiz "q\n"
+	.asciiz "q"
 
 quitCommandFull:
-	.asciiz "quit\n"
+	.asciiz "quit"
 
 helpCommandShort:
-	.asciiz "h\n"
+	.asciiz "h"
 
 helpCommandFull:
-	.asciiz "help\n"
+	.asciiz "help"
+
+commandsCommandShort:
+	.asciiz "c"
+
+commandsCommandFull:
+	.asciiz "commands"
 
 helpCommandWTF:
-	.asciiz "wtf\n"
+	.asciiz "wtf"
 
 binOperatorShort:
 	.asciiz "bin"
@@ -269,6 +275,14 @@ _dispatchToken__COMMA:
 	la $a1, helpCommandWTF
 	jal compareTokens
 	bnez, $v0, printHelp
+
+	la $a1, commandsCommandShort
+	jal compareTokens
+	bnez, $v0, printCommands
+
+	la $a1, commandsCommandFull
+	jal compareTokens
+	bnez, $v0, printCommands
 
 	j CONTINUE
 

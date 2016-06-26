@@ -5,7 +5,7 @@ FILE(<!MAIN.M4.ASM!>)
 .data
 
 additionalStartMessage:
-	.asciiz "       For additional usage information, type `,help'."
+	.asciiz "       For more comprahensive usage information, type `,help'\n       For a list of supported commands & operations, type `,commands'"
 
 # FIXME: This is used in too many places. Differentiate.
 overflowMessage:
