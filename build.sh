@@ -1,1 +1,1 @@
-m4 FinalProject.m4.asm > FinalProject.asm
+m4 RIBBN.m4.asm > RIBBN.asm

@@ -1,15 +1,37 @@
-FILE(<!MAIN.M4.ASM!>)
+# Lucas Myers and ELLIOTTCABLE
+# Final Project.m4.asm
+
+# NOTES
+# -----
+# During text-input processing, at any given time, $a0 is treated as a global cursor into the
+# last-entered text-input; and is advanced and manipulated by several procedures. (This is messy,
+# and thus, $s6 is globally reserved to serve this purpose, when I have time to replace it.)
+#
+# Similarly, $s7 is globally reserved as the pointer into the RPN-stack; it is incremented or
+# decremented as RPN operations are preformed.
+
+changequote(<!,!>)
+include(Utility.m4.asm)
+include(Conversion.m4.asm)
+include(Math.m4.asm)
+include(Eval.m4.asm)
+
 
 # DATA
 # ----
 .data
+# Global toggle for all debugging-output; switch to `1` to enable.
+DEBUGenable:
+	.byte 0
 
 additionalStartMessage:
 	.asciiz "       For more comprahensive usage information, type `,help'\n       For a list of supported commands & operations, type `,commands'"
 
-# FIXME: This is used in too many places. Differentiate.
-overflowMessage:
-	.asciiz "Overflow occured when reading an integer; try smaller numbers."
+wtfMessage:
+	.asciiz "Unknown error occured! D:"
+
+endMessage:
+	.asciiz "Goodbye!"
 
 # FIXME: Document
 noInputMessage:
@@ -73,5 +95,20 @@ _errorNoInput:
 	jal printString
 	jal printNewline
 	j CONTINUE                              # Back to main loop
+
+
+# Global last-ditch error handler.
+WTF:
+	la $a0, wtfMessage
+	jal printString
+	jal printNewline
+	# intentional fall-through
+
+EXIT:
+	la $a0, endMessage
+	jal printString
+	jal printNewline
+	li $v0, 10
+	syscall
 
 dnl vim: set shiftwidth=8 tabstop=8 noexpandtab softtabstop& list listchars=tab\: ·:
