@@ -23,7 +23,7 @@ bracketsMessage:
 	.asciiz "This is a ‘Reverse Polish Notation’, or RPN, calculator; brackets are unsupported: "
 
 tooFewOperandsMessage:
-	.asciiz "Operation dispatched with too few operands on stack:"
+	.asciiz "Operation dispatched with too few operands on stack: "
 
 tooFewOperationsMessage:
 	.asciiz "Input exhausted without exhausting RPN stack; too many operands:"
@@ -33,6 +33,9 @@ unsupportedOperationMessage:
 
 unsupportedInputMessage:
 	.asciiz "FATAL: Your input included unsupported characters!"
+
+suspectedInfix:
+	.asciiz "(NOTE: Your input appears to be in infix form, `foo + bar`; whereas this is an\n       RPN calculator, and expects input of the form `foo bar +`!)"
 
 .align 2
 rpnStack: # Storage for up to 64 stack-operations
@@ -90,14 +93,27 @@ _evaluateRPN__prelude:
 	li $t9, 3               # allocate stack space for THREE 4-byte items, including:
 	jal stackIN
 	sw $s0, -8($fp)         # the caller's $s0
+
+	li $v1, 0
 	# intentional fall-through
 
-_evaluateRPN__loop:
+_evaluateRPN__loop1:
 	la $a3, evaluateRPNLoopDescription
 	jal printStringDEBUG
 	move $a3, $a0
 	jal printStringDEBUG
 
+	bnez $v1, _evaluateRPN__infix
+	j _evaluateRPN__loop2
+
+_evaluateRPN__infix:
+	la $a0, suspectedInfix
+	jal printString
+	jal printNewline
+
+	j CONTINUE
+
+_evaluateRPN__loop2:
 	# Consume whitespace
 	li $a1, 0
 	jal consumeCharacters
@@ -105,7 +121,7 @@ _evaluateRPN__loop:
 	jal dispatchToken
 
 	lb $t0, ($a0)                           # Peek the first character into $t0
-	bne $t0, 10, _evaluateRPN__loop         # If line-feed, we're done
+	bne $t0, 10, _evaluateRPN__loop1        # If line-feed, we're done
 	# intentional fall-through
 
 _evaluateRPN__verify:
@@ -411,11 +427,21 @@ _dispatchToken__CONTROL:
 	j CONTINUE
 
 _dispatchToken__tooFewOperands:
+	move $t1, $a0
+
 	la $a0, tooFewOperandsMessage
 	jal printString
+
+	move $a1, $t1
+	addi $a0, $a1, -1                       # Yes, intentionally reading the *previous* char
+	jal printStringUpTo
 	jal printNewline
 
 	jal dumpRPNStack
+
+	# indicate possible infix-input
+	li $v1, 1
+
 	# intentional fall-through
 
 _dispatchToken__postlude:
