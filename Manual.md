@@ -80,3 +80,5 @@ Exits RIBBN.
 ### `,h` and `,help` ###
 Prints a usage message.
 
+### `,debug` ###
+Toggles debug output.
