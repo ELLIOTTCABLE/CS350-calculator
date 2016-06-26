@@ -81,6 +81,12 @@ Commands:
 # ----------
 .text
 
+toggleDebug:
+	lb $t0, DEBUGenable
+	not $t0, $t0
+	sb $t0, DEBUGenable
+	j CONTINUE
+
 # === syscall wrappers ===
 # All of these stomp on $t0, and some on $t1 (and, of course, on $ra.);
 # `print(String|Integer)DEBUG` expect $a3; printDescribedIntegerDEBUG expects $v0 as well.
