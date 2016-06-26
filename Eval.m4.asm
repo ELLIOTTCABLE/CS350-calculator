@@ -3,6 +3,22 @@ FILE(<!EVAL.M4.ASM!>)
 # DATA
 # ----
 .data
+
+quitCommandShort:
+	.asciiz "q\n"
+
+quitCommandFull:
+	.asciiz "quit\n"
+
+helpCommandShort:
+	.asciiz "h\n"
+
+helpCommandFull:
+	.asciiz "help\n"
+
+helpCommandWTF:
+	.asciiz "wtf\n"
+
 tooFewOperandsMessage:
 	.asciiz "Operation dispatched with too few operands on stack:"
 
@@ -199,6 +215,33 @@ _dispatchToken__OTHER_table:
 # NYI: dispatches to separate command-dispatcher
 _dispatchToken__COMMA:
 	addi $a0, 1     # Increment cursor past the operator
+
+	li $a1, 0
+	jal consumeCharacters
+
+	# Check for first quit command
+	la $a1, quitCommandShort
+	jal compareStrings
+	bnez $v0, EXIT
+
+	la $a1, quitCommandFull
+	jal compareStrings
+	bnez $v0, EXIT
+
+	la $a1, helpCommandShort
+	jal compareStrings
+	bnez, $v0, printUsageMessage
+
+	la $a1, helpCommandFull
+	jal compareStrings
+	bnez, $v0, printUsageMessage
+
+	la $a1, helpCommandWTF
+	jal compareStrings
+	bnez, $v0, printUsageMessage
+
+	j CONTINUE
+
 
 # NYI: peek at subsequent character, then dispatch either to unary-dispatcher or to decimal-parser
 _dispatchToken__PLUS:
