@@ -420,8 +420,8 @@ _dispatchToken__checkStackSize:
 	jr $ra
 
 _dispatchToken__DIGIT:
-	jal readInteger
-	beqz $v0, WTF # FIXME: Have this take an address as an argument, like readHex / readBinary
+	la $a1, WTF
+	jal readDecimal
 
 	move $s1, $v0
 	la $v0, pushIntegerDescription

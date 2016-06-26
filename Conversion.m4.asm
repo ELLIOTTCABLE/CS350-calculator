@@ -21,7 +21,7 @@ readHexLUT:
 readHexBuffer:
   .space 8
 
-readIntegerBuffer: # Used for parsing integers
+readDecimalBuffer: # Used for parsing integers
   .space 10
 
   .text
@@ -216,22 +216,22 @@ _readHexOverflow:
 _readHexExit:
   jr $ra
 
-# ### readInteger ###
+# ### readDecimal ###
 # @leaf
 # @param  $a0   start of string to parse as integer
 # @param  $a1   Jump target for overflows
 # @return $v0   parsed integer
 # @stomps $t0..9
 
-readInteger:
+readDecimal:
   move $t1, $a1
-  la $a1, _readIntegerRead
+  la $a1, _readDecimalRead
   j skipZeros
 
-_readIntegerRead:
+_readDecimalRead:
   move $a1, $t1
 
-  la $t0, readIntegerBuffer               # Pointer to current read location
+  la $t0, readDecimalBuffer               # Pointer to current read location
   addiu $t1, $t0, 10                      # Pointer to one past end of buffer (end of read)
 
   # Next-level hacking for negative numbers (not really)
@@ -244,9 +244,9 @@ _readIntegerRead:
   mul $t4, $t5, $t4
   add $t9, $t3, $t4
 
-  j _readIntegerReadLoop               # Jump into loop
+  j _readDecimalReadLoop               # Jump into loop
 
-_readIntegerReadLoop:
+_readDecimalReadLoop:
   lb $t2, ($a0)                           # Load next character from string
   addi $t2, -48                           # Offset ASCII value to get numerical value
 
@@ -257,21 +257,21 @@ _readIntegerReadLoop:
   li $t4, 10
   slt $t4, $t2, $t4
   and $t3, $t3, $t4
-  beqz $t3, _readIntegerSum
+  beqz $t3, _readDecimalSum
 
-  beq $t0, $t1, _readIntegerOverflow      # Jump to overflow if we're past 10 digits
+  beq $t0, $t1, _readDecimalOverflow      # Jump to overflow if we're past 10 digits
 
   sb $t2, ($t0)                           # Store numerical value in buffer
   addiu $t0, 1                            # Increment buffer pointer
   addiu $a0, 1                            # Increment string pointer
 
-  j _readIntegerReadLoop                  # Loop back
+  j _readDecimalReadLoop                  # Loop back
 
-_readIntegerSum:
+_readDecimalSum:
   li $v0, 0                               # Initialize accumulation register
 
   # Pointer to one before start of buffer (end of read)
-  la $t1, readIntegerBuffer
+  la $t1, readDecimalBuffer
   addi $t1, -1
 
   # Step the write head backwards, since we stop one past the buffer
@@ -281,10 +281,10 @@ _readIntegerSum:
   li $t2, 1
   li $t3, 10
 
-  j _readIntegerSumLoop                   # Jump to summation loop
+  j _readDecimalSumLoop                   # Jump to summation loop
 
-_readIntegerSumLoop:
-  beq $t0, $t1, _readIntegerReturn        # Branch to return when done reading
+_readDecimalSumLoop:
+  beq $t0, $t1, _readDecimalReturn        # Branch to return when done reading
 
   # Load byte and multiply by current place value
   lb $t4, ($t0)
@@ -294,19 +294,19 @@ _readIntegerSumLoop:
   slt $t7, $t5, $zero
   sne $t8, $t6, $zero
   or $t7, $t7, $t8
-  bnez $t7, _readIntegerOverflow         # Overflow check
+  bnez $t7, _readDecimalOverflow         # Overflow check
 
   # Accumulate into $v0
   addu $v0, $v0, $t5
-  bltz $v0, _readIntegerOverflow         # Overflow check
+  bltz $v0, _readDecimalOverflow         # Overflow check
 
   mul $t2, $t2, $t3                      # Increase place value
   addi $t0, -1                           # Decrement read pointer
-  j _readIntegerSumLoop                  # Loop back
+  j _readDecimalSumLoop                  # Loop back
 
-_readIntegerOverflow:
+_readDecimalOverflow:
   jr $a1
 
-_readIntegerReturn:
+_readDecimalReturn:
   mul $v0, $v0, $t9
   jr $ra
