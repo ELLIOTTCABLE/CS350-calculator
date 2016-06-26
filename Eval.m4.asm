@@ -58,6 +58,10 @@ unsupportedOperationMessage:
 unsupportedInputMessage:
 	.asciiz "FATAL: Your input included unsupported characters!"
 
+parsingOverflowMessage:
+	.asciiz "FATAL: Overflow occured during integer parsing!"
+
+
 .align 2
 rpnStack: # Storage for up to 64 stack-operations
 	.space 256 # 4 * 64
@@ -419,7 +423,7 @@ _dispatchToken__checkStackSize:
 	jr $ra
 
 _dispatchToken__DIGIT:
-	la $a1, WTF
+	la $a1, _dispatchToken__parsingOverflow
 	jal readDecimal
 
 	move $s1, $v0
@@ -450,7 +454,7 @@ _dispatchToken__ZERO:
 _dispatchToken__pushHex:
 	addi $a0, 2                             # *Actually* increment cursor past the operator
 
-	la $a1, WTF
+	la $a1, _dispatchToken__parsingOverflow
 	jal readHex
 
 	move $s1, $v0
@@ -466,7 +470,7 @@ _dispatchToken__pushHex:
 _dispatchToken__pushBinary:
 	addi $a0, 2                             # *Actually* increment cursor past the operator
 
-	la $a1, WTF
+	la $a1, _dispatchToken__parsingOverflow
 	jal readBinary
 
 	move $s1, $v0
@@ -506,6 +510,13 @@ _dispatchToken__UNSUPPORTED:
 
 _dispatchToken__CONTROL:
 	la $a0, unsupportedInputMessage
+	jal printString
+	jal printNewline
+
+	j CONTINUE
+
+_dispatchToken__parsingOverflow:
+	la $a0, parsingOverflowMessage
 	jal printString
 	jal printNewline
 
