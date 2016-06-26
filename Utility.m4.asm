@@ -48,7 +48,17 @@ For example, given the following, equivalent to `(4 + 1) * 4’ in infix,
 
 Any operand-value to an operation may be replaced by another RPN expression. In
 addition, literal values may be entered in either decimal `123’, hexadecimal
-`0x7b', or binary `0b01111011'. (Note: the `0b' and `0x' prefixes are required!)"
+`0x7b', or binary `0b01111011'. (Note: the `0b' and `0x' prefixes are required!)
+
+Items on the stack may be `peeked' using the `PEEK' (for decimal) and `HEX' or
+`BIN' (for hexadecimal / binary) unaries. These may be used after any operand:
+
+   =) 0xBEEF BIN
+   0b00000000000000001011111011101111
+   =) 0b100 0b001 + BIN 0b010 * BIN
+   0b00000000000000000000000000000101
+   0b00000000000000000000000000001010
+"
 
 commandsMessage:
 	.asciiz "dnl
@@ -63,7 +73,8 @@ Operations:
 
 Commands:
    ,help    ,quit
-   ,commands"
+   ,commands
+"
 
 
 # PROCEDURES
