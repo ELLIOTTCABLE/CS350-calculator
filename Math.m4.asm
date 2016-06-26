@@ -1,6 +1,11 @@
 FILE(<!MATH.M4.ASM!>)
 
 	.data
+hexPrefix:
+	.asciiz "0x"
+binPrefix:
+	.asciiz "0b"
+
 stringificationBuffer:
 	.space 1024
 
@@ -101,38 +106,53 @@ performDiv:
 	jr $ra
 
 performDecimalPrint:
-	move $v0, $a0
 	move $t8, $ra
+	move $t2, $a0
+	move $v0, $a1
 
+	move $a0, $a1
 	jal printInteger
 	jal printNewline
 
+	move $a0, $t2
 	jr $t8
 
 performBinaryPrint:
-	move $v0, $a0
 	move $t8, $ra
+	move $t2, $a0
+	move $v0, $a1
 
+	la $a0, binPrefix
+	jal printString
+
+	move $a0, $a1
 	la $a1, stringificationBuffer
 	jal stringifyBinary
 
-	la $a0, stringificationBuffer
+	move $a0, $a1
 	jal printString
 	jal printNewline
 
+	move $a0, $t2
 	jr $t8
 
 performHexPrint:
-	move $v0, $a0
 	move $t8, $ra
+	move $t2, $a0
+	move $v0, $a1
 
+	la $a0, hexPrefix
+	jal printString
+
+	move $a0, $a1
 	la $a1, stringificationBuffer
 	jal stringifyHex
 
-	la $a0, stringificationBuffer
+	move $a0, $a1
 	jal printString
 	jal printNewline
 
+	move $a0, $t2
 	jr $t8
 
 dnl vim: set shiftwidth=8 tabstop=8 noexpandtab softtabstop& list listchars=tab\: ·:
