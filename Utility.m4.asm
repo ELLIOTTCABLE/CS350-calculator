@@ -17,12 +17,21 @@ debugPrefix:
 stackPrefix:
 	.asciiz ")) "
 
+RPNPrefix:
+	.asciiz ")) "
+
 dotChar:
 	.asciiz "."
 spaceChar:
 	.asciiz " "
 newlineChar:
 	.asciiz "\n"
+
+stackINDescription:
+	.asciiz "SP-: "
+
+stackOUTDescription:
+	.asciiz "SP+: "
 
 
 # PROCEDURES
@@ -31,7 +40,7 @@ newlineChar:
 
 # === syscall wrappers ===
 # All of these stomp on $t0, and some on $t1 (and, of course, on $ra.);
-# `print(String|Integer)DEBUG` expect $a3.
+# `print(String|Integer)DEBUG` expect $a3; printDescribedIntegerDEBUG expects $v0 as well.
 
 printInteger: # @leaf
 	move $t0, $v0
@@ -124,13 +133,13 @@ printStringDEBUG: # @leaf
 
 	move $v0, $t1
 	move $a0, $t0
-
-	printStringDEBUGEnd:
+	# intentional fall-through
+printStringDEBUGEnd:
 	jr $ra
 
 printIntegerDEBUG: # @leaf
 	lb $t0, DEBUGenable
-	beqz $t0, printStringDEBUGEnd
+	beqz $t0, printIntegerDEBUGEnd
 
 	move $t0, $a0
 	move $t1, $v0
@@ -139,18 +148,51 @@ printIntegerDEBUG: # @leaf
 	la $a0, debugPrefix
 	syscall
 
-  li $v0, 1
+	li $v0, 1
 	move $a0, $a3
 	syscall
 
-  li $v0, 4
+	li $v0, 4
 	la $a0, newlineChar
 	syscall
 
 	move $v0, $t1
 	move $a0, $t0
+	# intentional fall-through
+printIntegerDEBUGEnd:
+	jr $ra
 
-	printIntegerDEBUGEnd:
+# ### stackIN ###
+# @leaf
+# @param  $a3   integer value to print
+# @param  $v0   address of a descriptive string for that integer value
+# @stomps $t0..$t1
+printDescribedIntegerDEBUG: # @leaf
+	lb $t0, DEBUGenable
+	beqz $t0, printDescribedIntegerDEBUGEnd
+
+	move $t0, $a0
+	move $t1, $v0
+
+	li $v0, 4
+	la $a0, debugPrefix
+	syscall
+
+	li $v0, 4
+	move $a0, $t1
+	syscall
+
+	li $v0, 1
+	move $a0, $a3
+	syscall
+
+	li $v0, 4
+	la $a0, newlineChar
+	syscall
+
+	move $a0, $t0
+	# intentional fall-through
+printDescribedIntegerDEBUGEnd:
 	jr $ra
 
 
@@ -172,6 +214,97 @@ getLine: # @leaf
 	jr $ra
 
 
+# ### stack manipulation helpers! ###
+#
+#                     ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+#              0xFF008┃(envp)                       ┃
+#                     ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+#              0xFF004┃(argv)                       ┃
+#                     ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+#              0xFF000│(argc)                       │◀──── (start-$sp)
+#                     ├~~~~~~~~~~~~~~~~~~~~~~~~~~~~~┤ ┐
+# [ ($fp)-00 ] 0xFEFFC│0x00000 (non-existent $fp)   │◀┼─── (previous-$fp)
+#                     ├─────────────────────────────┤ │
+# [ ($fp)-04 ] 0xFEFF8│0xFECAFECA (another $ra)     │ │   Previous
+#                     ├─────────────────────────────┤ │  stack-frame
+# [ ($fp)-08 ] 0xFEFF4│...                          │ │
+#                     ├─────────────────────────────┤ │
+# [ ($fp)-0C ] 0xFEFF0│...                          │ │
+#                     ├~~~~~~~~~~~~~~~~~~~~~~~~~~~~~┤ ┘
+# [  $fp +08 ] 0xFEFEC│(2nd stack-passed arg)       │
+#                     ├─────────────────────────────┤
+# [  $fp +04 ] 0xFEFE8│(1nd stack-passed arg)       │◀──── (previous-$sp)
+#                     ├~~~~~~~~~~~~~~~~~~~~~~~~~~~~~┤ ┓
+# [  $fp -00 ] 0xFEFE4│0xFEFFC (prev. $fp)          │◀╋─── $fp: 0xFEFE4
+#                     ├─────────────────────────────┤ ┃
+# [  $fp -04 ] 0xFEFE0│0xDEADBEEF (prev. $ra)       │ ┃
+#                     ├─────────────────────────────┤ ┃    Current
+# [  $fp -08 ] 0xFEFDC│...                          │ ┃  stack-frame
+#                     ├─────────────────────────────┤ ┃
+# [  $fp -0C ] 0xFEFD8│...                          │ ┃
+#                     ├─────────────────────────────┤ ┃
+# [  $fp -10 ] 0xFEFD4│...                          │◀╋─── $sp: 0xFEFD4
+#                     └~~~~~~~~~~~~~~~~~~~~~~~~~~~~~┘ ┛
+
+# ### stackIN ###
+# This handles saving the $ra and $sp, updating the $sp and $fp, and advancing the stack-pointer,
+# for a calling procedure. Since this is called via `jal`, it expects the pre-existing `$ra` in
+# `$t8`. (Chosen because we can't stomp on the `$a` registers at the start of a non-leaf!)
+# @leaf
+# @param  $t9   *total* number of stack slots to make available (including $fp and $ra!)
+# @param  $t8   value to store as $ra
+# @stomps $t6..$t7
+
+stackIN:
+	move $t7, $ra
+	addi $t9, -1                                    # Account for the $fp slot
+	mul $t9, $t9, 4
+	neg $t9, $t9
+
+	addi $sp, -4                                    # Decrement (move-forward) $sp by one slot,
+	sw $fp, ($sp)                                   # insert (push) the previous base-pointer,
+	move $fp, $sp                                   # and update the base-pointer.
+
+	add $sp, $sp, $t9                               # Allocate stack space for `N` 4-byte slots,
+	sw $t8, -4($fp)
+
+	lw $t6, stackStart
+	sub $t6, $sp, $t6
+
+	la $v0, stackINDescription
+	move $a3, $t6
+	jal printDescribedIntegerDEBUG
+
+	jr $t7
+
+
+# ### stackOUTAndReturn ###
+# This restores the stack, acting as the meat of the postlude of a non-leaf procedure.
+#
+# Note that this *directly* jumps to the caller's-caller; meaning that `j stackOUTAndReturn` should
+# be the last instruction in a non-leaf procedure.
+#
+# @direct
+# @param  $t9   *total* number of stack slots to pop
+# @stomps $t8
+
+stackOUTAndReturn:
+	mul $t9, $t9, 4
+
+	lw $t7, -4($fp)
+	lw $fp, -0($fp)
+	add $sp, $sp, $t9
+
+	lw $t8, stackStart
+	sub $t8, $sp, $t8
+
+	la $v0, stackOUTDescription
+	move $a3, $t8
+	jal printDescribedIntegerDEBUG
+
+	jr $t7
+
+
 # ### dumpRPNStack ###
 # @non-leaf
 # @param  $s7   pointer to the top (next, empty slot) of the RPN stack
@@ -179,15 +312,14 @@ getLine: # @leaf
 
  dumpRPNStack:
 _dumpRPNStack__prelude:
-	addi $sp, $sp, -12      # Allocate stack space for THREE 4-byte items:
-	sw $fp,  8($sp)         # caller's $fp,
-	move $fp, $sp
-	sw $ra, -0($fp)         # caller's $ra,
-	sw $s0, -4($fp)         # caller's $s0.
+	move $t8, $ra           # Instruct stackIN to save the $ra on the stack *and*,
+	li $t9, 3               # allocate stack space for THREE 4-byte items, including:
+	jal stackIN
+	sw $s0, -8($fp)         # the caller's $s0
 
 	move $s0, $s7
 
-	la $a0, stackPrefix
+	la $a0, RPNPrefix
 	jal printString
 	# intentional fall-through
 
@@ -205,12 +337,9 @@ _dumpRPNStack__loop:
 _dumpRPNStack__postlude:
 	jal printNewline
 
-	lw $s0, -4($fp)
-	lw $ra, -0($fp)
-	lw $fp,  4($fp) # loads the old fp *based on* the current fp
-	addi $sp, $sp, 12
-
-	jr $ra
+	lw $s0, -8($fp)
+	li $t9, 3
+	j stackOUTAndReturn
 
 
 # ### compareStrings ###

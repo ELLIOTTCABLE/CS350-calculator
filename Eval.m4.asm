@@ -11,13 +11,13 @@ rpnStack: # Storage for up to 64 stack-operations
 	.space 256 # 4 * 64
 
 evaluateRPNLoopDescription:
-	.asciiz "(RPN: looping)"
+	.asciiz "RPN: looping"
 dispatchTokenDescription:
-	.asciiz "(RPN: dispatching)"
+	.asciiz "RPN: dispatching "
 dispatchBinaryDescription:
-	.asciiz "(RPN: dispatching binary)"
+	.asciiz "RPN: dispatching binary"
 pushIntegerDescription:
-	.asciiz "(RPN: pushing)"
+	.asciiz "RPN: Pushing "
 
 # PROCEDURES
 # ----------
@@ -58,11 +58,10 @@ extractTokenBounds:
 
  evaluateRPN:
 _evaluateRPN__prelude:
-	addi $sp, $sp, -12      # Allocate stack space for THREE 4-byte items:
-	sw $fp,  8($sp)         # caller's $fp,
-	move $fp, $sp
-	sw $ra, -0($fp)         # caller's $ra,
-	sw $s0, -4($fp)         # caller's $s0.
+	move $t8, $ra           # Instruct stackIN to save the $ra on the stack *and*,
+	li $t9, 3               # allocate stack space for THREE 4-byte items, including:
+	jal stackIN
+	sw $s0, -8($fp)         # the caller's $s0
 	# intentional fall-through
 
 _evaluateRPN__loop:
@@ -99,12 +98,9 @@ _evaluateRPN__verify:
 	# intentional fall-through
 
 _evaluateRPN__postlude:
-	lw $s0, -4($fp)
-	lw $ra, -0($fp)
-	lw $fp,  4($fp) # loads the old fp *based on* the current fp
-	addi $sp, $sp, 12
-
-	jr $ra
+	lw $s0, -8($fp)
+	li $t9, 3
+	j stackOUTAndReturn
 
 
 # ### dispatchToken ###
@@ -115,29 +111,19 @@ _evaluateRPN__postlude:
 
  dispatchToken:
 _dispatchToken__prelude:
-	# NOTE: I'm confused about the conventions w.r.t the frame-pointer; it seems that, generally
-	#       speaking, $fp should point to the *start* of the stack-frame (i.e. the value of $sp
-	#       before any manipulation.) However, this required me to save the value of the
-	#       caller's existing $fp somewhere temporary, so I can replace it, and that was a waste
-	#       of quite a few instructions; so I opted to store that *guaranteed* word (caller's
-	#       frame- pointer) *before* our frame-pointer (i.e. at `-4($fp)`). Thus, arguments
-	#       passed to us on the stack begin with `-8($fp)` instead of the obvious `-4($fp)`.
-	#       (This, as far as I can tell, matches the x86 calling-convention.) ~ec
-	addi $sp, $sp, -16      # Allocate stack space for four 4-byte items:
-	sw $fp, 12($sp)         # caller's $fp,
-	move $fp, $sp
-	sw $ra, -0($fp)         # caller's $ra,
-	sw $s0, -4($fp)         # caller's $s0,
-	sw $s1, -8($fp)         # caller's $s1.
+	move $t8, $ra           # Instruct stackIN to save the $ra on the stack *and*,
+	li $t9, 4               # allocate stack space for THREE 4-byte items, including:
+	jal stackIN
+	sw $s0,  -8($fp)
+	sw $s1, -12($fp)
 	# intentional fall-through
 
 _dispatchToken__body:
 	lb $s0, ($a0)                           # Peek the first character into $s0
 
-	la $a3, dispatchTokenDescription
-	jal printStringDEBUG
+	la $v0, dispatchTokenDescription
 	move $a3, $s0
-	jal printIntegerDEBUG
+	jal printDescribedIntegerDEBUG
 
 	# ASCII bounds-checking:
 	# <~~~                                  # Out-of-bounds control-characters:     erraneous
@@ -217,8 +203,10 @@ _dispatchToken__PLUS:
 	lb $t0, ($t0)                           # Peek the second character into $t0
 
 	seq $t1, $t0, 32
-	seq $t2, $t0, 9
+	seq $t2, $t0, 10
+	seq $t3, $t0, 9
 	or $t0, $t1, $t2
+	or $t0, $t0, $t3
 	beqz $t0, _dispatchToken__DIGIT         # If the next character is *not* a space, number!
 
 	addi $a0, 1                             # *Actually* increment cursor past the operator
@@ -245,7 +233,7 @@ _dispatchToken__dispatchBinaryOp:
 	# Expects a target operation's address in $a1
 	move $t2, $a1
 
-	li $t0, 2
+	li $a1, 2
 	jal _dispatchToken__checkStackSize
 
 	lw $a1, ($s7)                                   # Load two stack-elements into arguments,
@@ -263,25 +251,25 @@ _dispatchToken__DIGIT:
 	jal readInteger
 	beqz $v0, WTF
 
-	la $a3, pushIntegerDescription
-	jal printStringDEBUG
-	move $a3, $v0
-	jal printIntegerDEBUG
+	move $s1, $v0
+	la $v0, pushIntegerDescription
+	move $a3, $s1
+	jal printDescribedIntegerDEBUG
+	move $v0, $s1
 
 	sw $v0, ($s7)                                   # push the integer onto the stack
 	addi $s7, 4
 
 	j _dispatchToken__postlude
 
-# Compares the stack-size to a minimum of $t0
-# Yes, I'm using $t0 as an argument register. go die. ~ec
+# Compares the stack-size to a minimum of $a1 elements
 _dispatchToken__checkStackSize:
-	mul $t0, $t0, 4
+	mul $a1, $a1, 4
 
-	la $t1, rpnStack
-	blt $t1, $s7, WTF
+	la $t0, rpnStack
+	blt $s7, $t0, WTF
 
-	sub $t1, $s7, $t0
+	sub $t1, $s7, $a1
 	blt $t1, $t0, _dispatchToken__tooFewOperands
 
 	jr $ra
@@ -306,12 +294,9 @@ _dispatchToken__dumpStack:
 	# intentional fall-through
 
 _dispatchToken__postlude:
-	lw $s1, -8($fp)
-	lw $s0, -4($fp)
-	lw $ra, -0($fp)
-	lw $fp,  4($fp) # loads the old fp *based on* the current fp
-	addi $sp, $sp, 16
-
-	jr $ra
+	lw $s1, -12($fp)
+	lw $s0,  -8($fp)
+	li $t9, 4
+	j stackOUTAndReturn
 
 dnl vim: set shiftwidth=8 tabstop=8 noexpandtab softtabstop& list listchars=tab\: ·:

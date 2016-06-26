@@ -10,6 +10,10 @@ startMessage:
 overflowMessage:
 	.asciiz "Overflow occured when reading an integer; try smaller numbers."
 
+# FIXME: Document
+noInputMessage:
+	.asciiz "You must enter a command of the form ... NYI"
+
 .align 2
 stackStart: # Stack-pointer as of the main-loop, for escape
 	.space 4
@@ -41,9 +45,6 @@ CONTINUE:
 	la $a1, 1024
 	jal getLine
 
-	move $a3, $a0
-	jal printStringDEBUG
-
 	# Discard leading whitespace
 	li $a1, 0
 	jal consumeCharacters
@@ -51,15 +52,17 @@ CONTINUE:
 	move $a3, $a0
 	jal printStringDEBUG
 
+	lb $t0, ($a0)                           # Peek the first character into $t0
+	beq $t0, 10, _errorNoInput              # If line-feed, error
+
 	# Initialize the RPN stack
 	la $s7, rpnStack
 	jal evaluateRPN
 
 	j CONTINUE                              # Loop back
 
-# FIXME: This is used globally and I don't like it. ~ec
-errorOverflow:
-	la $a0, overflowMessage
+_errorNoInput:
+	la $a0, noInputMessage
 	jal printString
 	jal printNewline
 	j CONTINUE                              # Back to main loop
