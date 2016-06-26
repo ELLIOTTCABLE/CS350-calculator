@@ -242,8 +242,6 @@ _dispatchToken__COMMA:
 
 	j CONTINUE
 
-
-# NYI: peek at subsequent character, then dispatch either to unary-dispatcher or to decimal-parser
 _dispatchToken__PLUS:
 	la $a1, performAdd
 	j _dispatchToken__dispatchPossibleNumber
@@ -268,10 +266,14 @@ _dispatchToken__dispatchPossibleNumber:
 
 # NYI: dispatch to math routines
 _dispatchToken__ASTERISK:
-	addi $a0, 1     # Increment cursor past the operator
+	addi $a0, 1                             # Increment cursor past the operator
+	la $a1, performMul
+	j _dispatchToken__dispatchBinaryOp
 
 _dispatchToken__SOLIDUS:
-	addi $a0, 1     # Increment cursor past the operator
+	addi $a0, 1                             # Increment cursor past the operator
+	la $a1, performDiv
+	j _dispatchToken__dispatchBinaryOp
 
 # NYI: dispatch to operation-lookup (BIN, HEX, ADD, etc)
 _dispatchToken__WORD:
@@ -308,7 +310,6 @@ _dispatchToken__checkStackSize:
 
 	jr $ra
 
-# NYI: dispatch to integer parser
 _dispatchToken__DIGIT:
 	jal readInteger
 	beqz $v0, WTF # FIXME: Have this take an address as an argument, like readHex / readBinary

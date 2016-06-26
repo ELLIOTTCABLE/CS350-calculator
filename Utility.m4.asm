@@ -162,7 +162,7 @@ printIntegerDEBUG: # @leaf
 printIntegerDEBUGEnd:
 	jr $ra
 
-# ### stackIN ###
+# ### printDescribedIntegerDEBUG ###
 # @leaf
 # @param  $a3   integer value to print
 # @param  $v0   address of a descriptive string for that integer value

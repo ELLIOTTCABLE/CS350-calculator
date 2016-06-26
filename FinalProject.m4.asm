@@ -23,13 +23,6 @@ include(Main.m4.asm)
 DEBUGenable:
 	.byte 0
 
-# FIXME: Relocate these
-quitCommandShort:
-	.asciiz "q\n"
-
-quitCommandLong:
-	.asciiz "quit\n"
-
 wtfMessage:
 	.asciiz "Unknown error occured! D:"
 
