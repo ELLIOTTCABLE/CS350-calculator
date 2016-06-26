@@ -38,22 +38,19 @@ hexOperatorShort:
 	.asciiz "hex"
 
 bracketsMessage:
-	.asciiz "This is a ‘Reverse Polish Notation’, or RPN, calculator; brackets are unsupported: "
-
-tooFewOperandsMessage:
-	.asciiz "Operation dispatched with too few operands on stack: "
+	.asciiz "RPN does not support (or require!) parenthetical grouping: "
 
 tooFewOperationsMessage:
-	.asciiz "Input exhausted without exhausting RPN stack; too many operands:"
+	.asciiz "Input exhausted with items remaining on the RPN stack (did you forget an op?):"
+
+tooFewOperandsMessage:
+	.asciiz "FATAL: Operation dispatched with too few operands on stack: "
 
 unsupportedOperationMessage:
-	.asciiz "Unsupported operation: "
+	.asciiz "FATAL: Unsupported operation: "
 
 unsupportedInputMessage:
 	.asciiz "FATAL: Your input included unsupported characters!"
-
-suspectedInfix:
-	.asciiz "(NOTE: Your input appears to be in infix form, `foo + bar`; whereas this is an\n       RPN calculator, and expects input of the form `foo bar +`!)"
 
 .align 2
 rpnStack: # Storage for up to 64 stack-operations

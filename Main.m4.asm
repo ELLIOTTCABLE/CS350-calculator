@@ -3,8 +3,9 @@ FILE(<!MAIN.M4.ASM!>)
 # DATA
 # ----
 .data
-startMessage:
-	.asciiz "Welcome to the calculator. Type your calculations in Reverse Polish Notation (i.e. prefix notation), with an operator followed by two integer operands. The result will appear on the next line. For instance, '+ 2 3' will evaluate to '5' on a new line. The +, -, *, and / operators are accepted."
+
+additionalStartMessage:
+	.asciiz "       For additional usage information, type `,help'."
 
 # FIXME: This is used in too many places. Differentiate.
 overflowMessage:
@@ -34,7 +35,10 @@ lineBuffer: # Used for storing lines read in from user input
 main:
 	sw $sp, stackStart
 
-	la $a0, startMessage
+	jal printUsage
+	jal printNewline                        # additional blank line
+
+	la $a0, additionalStartMessage
 	jal printString
 	jal printNewline
 	# intentional fall-through

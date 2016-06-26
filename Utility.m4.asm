@@ -33,6 +33,9 @@ stackINDescription:
 stackOUTDescription:
 	.asciiz "SP+: "
 
+usageMessage:
+	.asciiz "USAGE: [ <val> <val> ... <op> ... ] - Enter operands followed by an operation;\n       for instance: `123 0b01101 +' or `45 BIN'."
+
 
 # PROCEDURES
 # ----------
@@ -113,16 +116,12 @@ printNewline: # @leaf
 	move $a0, $t0
 	jr $ra
 
-printResult: # @leaf
+printUsage: # @leaf
 	move $t0, $a0
 	move $t1, $v0
 
 	li $v0, 4
-	la $a0, resultPrefix
-	syscall
-
-	li $v0, 1
-	move $a0, $t0
+	la $a0, usageMessage
 	syscall
 
 	li $v0, 4
