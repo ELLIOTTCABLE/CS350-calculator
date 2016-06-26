@@ -21,7 +21,7 @@ include(Main.m4.asm)
 
 # Global toggle for all debugging-output; switch to `1` to enable.
 DEBUGenable:
-	.byte 0
+	.byte 1
 
 # FIXME: Relocate these
 quitCommandShort:

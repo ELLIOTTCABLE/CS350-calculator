@@ -3,8 +3,11 @@ FILE(<!EVAL.M4.ASM!>)
 # DATA
 # ----
 .data
-fewOperandsMessage:
+tooFewOperandsMessage:
 	.asciiz "Operation dispatched with too few operands on stack:"
+
+tooFewOperationsMessage:
+	.asciiz "Input exhausted without exhausting RPN stack; too many operands:"
 
 .align 2
 rpnStack: # Storage for up to 64 stack-operations
@@ -77,24 +80,24 @@ _evaluateRPN__loop:
 	jal dispatchToken
 
 	lb $t0, ($a0)                           # Peek the first character into $t0
-	beq $t0, 10, _evaluateRPN__verify       # If line-feed, we're done
-	j _evaluateRPN__loop
-
-_evaluateRPN__INCOMPLETE:
-	# NYI: Dump an error message, as well as current stack-contents.
+	bne $t0, 10, _evaluateRPN__loop         # If line-feed, we're done
+	# intentional fall-through
 
 _evaluateRPN__verify:
 	# If the stack hasn't been exhausted, it's an error
 	la $t0, rpnStack
 	addi $t0, 4
-	bne $t0, $s7, _evaluateRPN__INCOMPLETE
+	bne $t0, $s7, _evaluateRPN__incomplete
 
-	move $s0, $a0
-	move $s7, $t0
-	lw $a0, ($s7)                           # Load the final remaining element from the stack
+	jal dumpRPNStack                                # We dump the stack, which we've just
+	j _evaluateRPN__postlude                        # verified has one item, as result ‘output’
 
-	jal printResult
-	move $a0, $s0
+_evaluateRPN__incomplete:
+	la $a0, tooFewOperandsMessage
+	jal printString
+	jal printNewline
+
+	jal dumpRPNStack
 	# intentional fall-through
 
 _evaluateRPN__postlude:
@@ -236,14 +239,14 @@ _dispatchToken__dispatchBinaryOp:
 	li $a1, 2
 	jal _dispatchToken__checkStackSize
 
-	lw $a1, ($s7)                                   # Load two stack-elements into arguments,
+	lw $a1, -8($s7)                                   # Load two stack-elements into arguments,
 	lw $a2, -4($s7)
 
 	jalr $t2
 
 	addi $s7, -4                                    # shrink RPN stack by one slot,
-	sw $v0, ($s7)                                   # and replace the second-to-top item with
-	                                                # the return-value of the operation
+	sw $v0, -4($s7)                                 # and replace the top item with the return-
+	                                                # value of the operation
 	j _dispatchToken__postlude
 
 # NYI: dispatch to integer parser
@@ -284,12 +287,10 @@ _dispatchToken__UNSUPPORTED:
 _dispatchToken__CONTROL:
 
 _dispatchToken__tooFewOperands:
-	la $a0, fewOperandsMessage
+	la $a0, tooFewOperandsMessage
 	jal printString
 	jal printNewline
-	# intentional fall-through
 
-_dispatchToken__dumpStack:
 	jal dumpRPNStack
 	# intentional fall-through
 

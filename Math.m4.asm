@@ -5,21 +5,16 @@ stringificationBuffer:
 	.space 1024
 
 additionOverflowMessage:
-	.asciiz "Overflow occured during the addition of "
+	.asciiz "Overflow occured during addition:"
 
 subtractionOverflowMessage:
-	.asciiz "Overflow occured during the subtraction of "
+	.asciiz "Overflow occured during subtraction:"
 
 multiplicationOverflowMessage:
-	.asciiz "Overflow occured during the multiplication of "
-
-overflowMessageConnector:
-	.asciiz " and "
-
-	.text
+	.asciiz "Overflow occured during multiplication:"
 
 performAdd:
-	addu $v0, $a0, $a1
+	addu $v0, $a1, $a2
 
 	# Sign bits
 	and $t0, $v0, 0x80000000
@@ -35,28 +30,16 @@ performAdd:
 	jr $ra
 
 _performAddOverflow:
-	move $t0, $a0
-	move $t1, $a1
-
 	la $a0, additionOverflowMessage
 	jal printString
-
-	move $a0, $t0
-	jal printInteger
-
-	la $a0, overflowMessageConnector
-	jal printString
-
-	move $a0, $t1
-	jal printInteger
-
 	jal printNewline
+
+	jal dumpRPNStack
 
 	j CONTINUE
 
 performSub:
 	neg $a1, $a1
-	
 	# Sign bits
 	and $t0, $v0, 0x80000000
 	and $t1, $a1, 0x80000000
@@ -69,27 +52,16 @@ performSub:
 	bnez $t0, _performSubOverflow
 
 _performSubOverflow:
-	move $t0, $a0
-	move $t1, $a1
-
 	la $a0, subtractionOverflowMessage
 	jal printString
-
-	move $a0, $t0
-	jal printInteger
-
-	la $a0, overflowMessageConnector
-	jal printString
-
-	move $a0, $t1
-	jal printInteger
-
 	jal printNewline
+
+	jal dumpRPNStack
 
 	j CONTINUE
 
 performMul:
-	mult $a0, $a1
+	mult $a1, $a2
 	mflo $v0
 
 	# Sign bits
@@ -109,27 +81,16 @@ performMul:
 	jr $ra
 
 _performMulOverflow:
-	move $t0, $a0
-	move $t1, $a1
-
 	la $a0, multiplicationOverflowMessage
 	jal printString
-
-	move $a0, $t0
-	jal printInteger
-
-	la $a0, overflowMessageConnector
-	jal printString
-
-	move $a0, $t1
-	jal printInteger
-
 	jal printNewline
+
+	jal dumpRPNStack
 
 	j CONTINUE
 
 performDiv:
-	div $v0, $a0, $a1
+	div $v0, $a1, $a2
 
 	jr $ra
 
@@ -145,7 +106,7 @@ performDecimalPrint:
 performBinaryPrint:
 	move $v0, $a0
 	move $t8, $ra
-	
+
 	la $a1, stringificationBuffer
 	jal stringifyBinary
 
@@ -167,3 +128,5 @@ performHexPrint:
 	jal printNewline
 
 	jr $t8
+
+dnl vim: set shiftwidth=8 tabstop=8 noexpandtab softtabstop& list listchars=tab\: ·:
