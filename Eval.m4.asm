@@ -202,6 +202,14 @@ _dispatchToken__COMMA:
 
 # NYI: peek at subsequent character, then dispatch either to unary-dispatcher or to decimal-parser
 _dispatchToken__PLUS:
+	la $a1, performAdd
+	j _dispatchToken__dispatchPossibleNumber
+
+_dispatchToken__HYPHEN:
+	la $a1, performSub
+	j _dispatchToken__dispatchPossibleNumber
+
+_dispatchToken__dispatchPossibleNumber:
 	addi $t0, $a0, 1                        # Copy-and-increment cursor past the operator
 	lb $t0, ($t0)                           # Peek the second character into $t0
 
@@ -213,11 +221,7 @@ _dispatchToken__PLUS:
 	beqz $t0, _dispatchToken__DIGIT         # If the next character is *not* a space, number!
 
 	addi $a0, 1                             # *Actually* increment cursor past the operator
-	la $a1, performAdd
 	j _dispatchToken__dispatchBinaryOp
-
-_dispatchToken__HYPHEN:
-_dispatchToken__ZERO:
 
 # NYI: dispatch to math routines
 _dispatchToken__ASTERISK:
@@ -249,22 +253,6 @@ _dispatchToken__dispatchBinaryOp:
 	                                                # value of the operation
 	j _dispatchToken__postlude
 
-# NYI: dispatch to integer parser
-_dispatchToken__DIGIT:
-	jal readInteger
-	beqz $v0, WTF
-
-	move $s1, $v0
-	la $v0, pushIntegerDescription
-	move $a3, $s1
-	jal printDescribedIntegerDEBUG
-	move $v0, $s1
-
-	sw $v0, ($s7)                                   # push the integer onto the stack
-	addi $s7, 4
-
-	j _dispatchToken__postlude
-
 # Compares the stack-size to a minimum of $a1 elements
 _dispatchToken__checkStackSize:
 	mul $a1, $a1, 4
@@ -276,6 +264,68 @@ _dispatchToken__checkStackSize:
 	blt $t1, $t0, _dispatchToken__tooFewOperands
 
 	jr $ra
+
+# NYI: dispatch to integer parser
+_dispatchToken__DIGIT:
+	jal readInteger
+	beqz $v0, WTF # FIXME: Have this take an address as an argument, like readHex / readBinary
+
+	move $s1, $v0
+	la $v0, pushIntegerDescription
+	move $a3, $s1
+	jal printDescribedIntegerDEBUG
+
+	sw $s1, ($s7)                                   # push the integer onto the stack
+	addi $s7, 4
+	j _dispatchToken__postlude
+
+_dispatchToken__ZERO:
+	addi $t0, $a0, 1                        # Copy-and-increment cursor past the operator
+	lb $t0, ($t0)                           # Peek the second character into $t0
+
+	seq $t1, $t0, 88                        # If the next character is an X
+	seq $t2, $t0, 120                       #                       or an x
+	or $t1, $t1, $t2
+	bnez $t1, _dispatchToken__pushHex
+
+	seq $t1, $t0, 66                        # If the next character is a B
+	seq $t2, $t0, 98                        #                       or a b
+	or $t1, $t1, $t2
+	bnez $t1, _dispatchToken__pushBinary
+
+	j _dispatchToken__DIGIT
+
+_dispatchToken__pushHex:
+	addi $a0, 2                             # *Actually* increment cursor past the operator
+
+	la $a1, WTF
+	jal readHex
+
+	move $s1, $v0
+	la $v0, pushIntegerDescription
+	move $a3, $s1
+	jal printDescribedIntegerDEBUG
+	move $v0, $s1
+
+	sw $s1, ($s7)                           # push the integer onto the stack
+	addi $s7, 4
+	j _dispatchToken__postlude
+
+_dispatchToken__pushBinary:
+	addi $a0, 2                             # *Actually* increment cursor past the operator
+
+	la $a1, WTF
+	jal readBinary
+
+	move $s1, $v0
+	la $v0, pushIntegerDescription
+	move $a3, $s1
+	jal printDescribedIntegerDEBUG
+	move $v0, $s1
+
+	sw $s1, ($s7)                                   # push the integer onto the stack
+	addi $s7, 4
+	j _dispatchToken__postlude
 
 # NYI: error message that this is RPN, i.e. try re-ordering
 _dispatchToken__BRACKETS:

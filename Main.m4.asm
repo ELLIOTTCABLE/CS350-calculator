@@ -14,6 +14,9 @@ overflowMessage:
 noInputMessage:
 	.asciiz "You must enter a command of the form ... NYI"
 
+stackSetDescription:
+	.asciiz "SP=: "
+
 .align 2
 stackStart: # Stack-pointer as of the main-loop, for escape
 	.space 4
