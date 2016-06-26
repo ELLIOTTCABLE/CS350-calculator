@@ -260,15 +260,15 @@ _dispatchToken__COMMA:
 
 	la $a1, helpCommandShort
 	jal compareTokens
-	bnez, $v0, printUsageMessage
+	bnez, $v0, printHelp
 
 	la $a1, helpCommandFull
 	jal compareTokens
-	bnez, $v0, printUsageMessage
+	bnez, $v0, printHelp
 
 	la $a1, helpCommandWTF
 	jal compareTokens
-	bnez, $v0, printUsageMessage
+	bnez, $v0, printHelp
 
 	j CONTINUE
 
