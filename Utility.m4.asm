@@ -361,26 +361,49 @@ _dumpRPNStack__postlude:
 	j stackOUTAndReturn
 
 
-# ### compareStrings ###
+# ### compareTokens ###
 # @leaf
-# @param  $a0   start address of first null-terminated string
-# @param  $a1   start address of second null-terminated string
+# @param  $a0   start address of first token
+# @param  $a1   start address of second token
 # @return $v0   1 if strings are equal, 0 if not
 
-compareStrings:
+compareTokens:
 	# Move arguments into temporaries
 	move $t0, $a0
 	move $t1, $a1
 	j _compareStringsLoop                   # Jump into loop
 
-_compareStringsLoop:
+_compareTokensLoop:
 	# Load characters from both strings
 	lb $t2, ($t0)
 	lb $t3, ($t1)
 
-	# Return conditions
-	bne $t2, $t3, _compareStringsReturnFalse
-	beqz $t2, _compareStringsReturnTrue     # Null-termination
+	seq $t4, $t2, 10
+	seq $t5, $t2, 32
+	or $t4, $t4, $t5
+	seq $t5, $t2, 9
+	or $t4, $t4, $t5
+	seq $t5, $t2, 0
+	or $t4, $t4, $t5
+
+	seq $t5, $t3, 10
+	seq $t6, $t3, 32
+	or $t5, $t5, $t6
+	seq $t6, $t3, 9
+	or $t5, $t5, $t6
+	seq $t6, $t3, 0
+	or $t5, $t5, $t6
+
+	and $t4, $t4, $t5
+
+	bnez $t4, _compareStringsReturnTrue
+
+	seq $t4, $t2, $t3
+	addi $t3, -32
+	seq $t5, $t2, $t3
+	or $t4, $t4, $t5
+
+	beqz $t4, _compareStringsReturnFalse
 
 	# Increment pointers
 	addiu $t0, 1
@@ -388,11 +411,11 @@ _compareStringsLoop:
 
 	j _compareStringsLoop                   # Loop back
 
-_compareStringsReturnFalse:
+_compareTokensReturnFalse:
 	li $v0, 0
 	jr $ra
 
-_compareStringsReturnTrue:
+_compareTokensReturnTrue:
 	li $v0, 1
 	jr $ra
 
