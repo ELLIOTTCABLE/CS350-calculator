@@ -117,24 +117,12 @@ _evaluateRPN__prelude:
 	li $v1, 0
 	# intentional fall-through
 
-_evaluateRPN__loop1:
+_evaluateRPN__loop:
 	la $a3, evaluateRPNLoopDescription
 	jal printStringDEBUG
 	move $a3, $a0
 	jal printStringDEBUG
 
-	bnez $v1, _evaluateRPN__infix
-	j _evaluateRPN__loop2
-
-# FIXME: Exception!?
-_evaluateRPN__infix:
-	la $a0, suspectedInfix
-	jal printString
-	jal printNewline
-
-	j CONTINUE
-
-_evaluateRPN__loop2:
 	# Consume whitespace
 	li $a1, 0
 	jal consumeCharacters
@@ -142,7 +130,7 @@ _evaluateRPN__loop2:
 	jal dispatchToken
 
 	lb $t0, ($a0)                           # Peek the first character into $t0
-	bne $t0, 10, _evaluateRPN__loop1        # If line-feed, we're done
+	bne $t0, 10, _evaluateRPN__loop         # If line-feed, we're done
 	# intentional fall-through
 
 _evaluateRPN__verify:
@@ -155,7 +143,7 @@ _evaluateRPN__verify:
 	j _evaluateRPN__postlude                        # verified has one item, as result ‘output’
 
 _evaluateRPN__incomplete:
-	la $a0, tooFewOperandsMessage
+	la $a0, tooFewOperationsMessage
 	jal printString
 	jal printNewline
 
@@ -524,11 +512,7 @@ _dispatchToken__tooFewOperands:
 	jal printNewline
 
 	jal dumpRPNStack
-
-	# indicate possible infix-input
-	li $v1, 1
-
-	# intentional fall-through
+	j CONTINUE
 
 _dispatchToken__postlude:
 	lw $s1, -12($fp)
