@@ -19,6 +19,24 @@ helpCommandFull:
 helpCommandWTF:
 	.asciiz "wtf\n"
 
+binOperatorShort:
+	.asciiz "bin"
+
+binOperatorFull:
+	.asciiz "binary"
+
+decOperatorShort:
+	.asciiz "dec"
+
+decOperatorFull:
+	.asciiz "decimal"
+
+peekOperatorFull:
+	.asciiz "peek"
+
+hexOperatorShort:
+	.asciiz "hex"
+
 bracketsMessage:
 	.asciiz "This is a ‘Reverse Polish Notation’, or RPN, calculator; brackets are unsupported: "
 
@@ -106,6 +124,7 @@ _evaluateRPN__loop1:
 	bnez $v1, _evaluateRPN__infix
 	j _evaluateRPN__loop2
 
+# FIXME: Exception!?
 _evaluateRPN__infix:
 	la $a0, suspectedInfix
 	jal printString
@@ -298,8 +317,56 @@ _dispatchToken__SOLIDUS:
 	la $a1, performDiv
 	j _dispatchToken__dispatchBinaryOp
 
-# NYI: dispatch to operation-lookup (BIN, HEX, ADD, etc)
 _dispatchToken__WORD:
+	la $a1, binOperatorShort
+	jal compareStrings
+	la $a1, stringifyBinary
+	bnez $v0, _dispatchToken__PEEK
+
+	la $a1, binOperatorFull
+	jal compareStrings
+	la $a1, stringifyBinary
+	bnez $v0, _dispatchToken__PEEK
+
+	la $a1, hexOperatorShort
+	jal compareStrings
+	la $a1, stringifyHex
+	bnez $v0, _dispatchToken__PEEK
+
+	la $a1, decOperatorShort
+	jal compareStrings
+	move $s1, $v0
+
+	la $a1, decOperatorFull
+	jal compareStrings
+	or $s1, $s1, $v0
+
+	la $a1, peekOperatorFull
+	jal compareStrings
+	or $s1, $s1, $v0
+
+	bnez $s1, _dispatchToken__PEEKDEC
+	# intentional fall-through
+
+_dispatchToken__unsupportedWord:
+	jal extractTokenBounds
+#	move $v0, $v0
+#	move $v1, $v1
+
+	la $a0, unsupportedOperationMessage
+	jal printString
+
+	move $a0, $v0
+	addi $a1, $v1, 1
+	jal printStringUpTo
+	jal printNewline
+
+	jal dumpRPNStack
+	j CONTINUE
+
+_dispatchToken__PEEK:
+
+_dispatchToken__PEEKDEC:
 
 _dispatchToken__dispatchBinaryOp:
 	la $a3, dispatchBinaryDescription

@@ -431,12 +431,14 @@ _compareTokensReturnTrue:
 
 consumeCharacters:
 	lb $t0, ($a0)
-	li $t1, 32
-	li $t2, 9
-	seq $t1, $t0, $t1
-	seq $t2, $t0, $t2
-	or $t0, $t1, $t2
-	beq $a1, $t0, _consumeEnd
+
+	seq $t1, $t0, 32
+	seq $t2, $t0, 10
+	or $t1, $t1, $t2
+	seq $t2, $t0, 9
+	or $t1, $t1, $t2
+	beq $a1, $t1, _consumeEnd
+
 	addi $a0, 1
 	j consumeCharacters
 _consumeEnd:
