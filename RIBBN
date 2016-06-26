@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+./build.sh
+spim -file "RIBBN.COMPILED.asm"

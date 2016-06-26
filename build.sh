@@ -1,1 +1,1 @@
-m4 RIBBN.m4.asm > RIBBN.asm
+m4 RIBBN.m4.asm > RIBBN.COMPILED.asm
